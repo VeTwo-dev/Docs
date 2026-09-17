@@ -1,0 +1,114 @@
+.vetwo-docs-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.vetwo-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 2rem;
+}
+.vetwo-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.vetwo-brand {
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-decoration: none;
+  color: #111;
+}
+.vetwo-nav {
+  display: flex;
+  gap: 1.5rem;
+}
+.vetwo-nav a {
+  text-decoration: none;
+  color: #555;
+}
+.vetwo-nav a:hover {
+  color: #111;
+}
+.vetwo-body {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+}
+.vetwo-sidebar {
+  width: 260px;
+  padding: 2rem 1rem;
+  border-right: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.vetwo-sidebar-group h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+.vetwo-sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+.vetwo-sidebar li {
+  margin-bottom: 0.25rem;
+}
+.vetwo-sidebar a {
+  text-decoration: none;
+  color: #555;
+  font-size: 0.9rem;
+}
+.vetwo-sidebar a:hover {
+  color: #0066cc;
+}
+.vetwo-content {
+  flex: 1;
+  padding: 2rem;
+  min-width: 0;
+}
+.vetwo-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 1.5rem 2rem;
+  text-align: center;
+  color: #888;
+  font-size: 0.875rem;
+}
+.vetwo-toc {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+.vetwo-toc h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+.vetwo-toc ul {
+  list-style: none;
+  padding: 0;
+}
+.vetwo-toc a {
+  text-decoration: none;
+  color: #555;
+  font-size: 0.9rem;
+}
+.vetwo-theme-toggle {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+.vetwo-search-input {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  width: 200px;
+  font-size: 0.9rem;
+}

@@ -1,0 +1,16 @@
+{
+  "name": "example-plugin",
+  "version": "1.0.0",
+  "description": "Example custom plugin for @vetwo/docs",
+  "type": "module",
+  "scripts": {
+    "docs:build": "docs build",
+    "docs:dev": "docs dev"
+  },
+  "dependencies": {
+    "@vetwo/docs": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

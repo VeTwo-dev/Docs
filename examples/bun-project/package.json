@@ -1,0 +1,16 @@
+{
+  "name": "example-bun",
+  "version": "1.0.0",
+  "description": "Example Bun project using @vetwo/docs",
+  "type": "module",
+  "scripts": {
+    "docs:build": "bunx docs build",
+    "docs:dev": "bunx docs dev"
+  },
+  "dependencies": {
+    "@vetwo/docs": "^1.0.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "name": "@vetwo/docs",
+  "version": "1.0.0",
+  "description": "The easiest and most powerful documentation generator for JavaScript and TypeScript",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./cli": {
+      "import": {
+        "types": "./dist/cli/index.d.ts",
+        "default": "./dist/cli/index.js"
+      },
+      "require": {
+        "types": "./dist/cli/index.d.cts",
+        "default": "./dist/cli/index.cjs"
+      }
+    },
+    "./config": {
+      "import": {
+        "types": "./dist/config/index.d.ts",
+        "default": "./dist/config/index.js"
+      },
+      "require": {
+        "types": "./dist/config/index.d.cts",
+        "default": "./dist/config/index.cjs"
+      }
+    },
+    "./plugins": {
+      "import": {
+        "types": "./dist/plugins/index.d.ts",
+        "default": "./dist/plugins/index.js"
+      },
+      "require": {
+        "types": "./dist/plugins/index.d.cts",
+        "default": "./dist/plugins/index.cjs"
+      }
+    },
+    "./languages": {
+      "import": {
+        "types": "./dist/languages/index.d.ts",
+        "default": "./dist/languages/index.js"
+      },
+      "require": {
+        "types": "./dist/languages/index.d.cts",
+        "default": "./dist/languages/index.cjs"
+      }
+    },
+    "./examples": {
+      "import": {
+        "types": "./dist/examples/index.d.ts",
+        "default": "./dist/examples/index.js"
+      },
+      "require": {
+        "types": "./dist/examples/index.d.cts",
+        "default": "./dist/examples/index.cjs"
+      }
+    },
+    "./documentation-relations": {
+      "import": {
+        "types": "./dist/documentation-relations/index.d.ts",
+        "default": "./dist/documentation-relations/index.js"
+      },
+      "require": {
+        "types": "./dist/documentation-relations/index.d.cts",
+        "default": "./dist/documentation-relations/index.cjs"
+      }
+    },
+    "./intelligence": {
+      "import": {
+        "types": "./dist/intelligence/index.d.ts",
+        "default": "./dist/intelligence/index.js"
+      },
+      "require": {
+        "types": "./dist/intelligence/index.d.cts",
+        "default": "./dist/intelligence/index.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
+    },
+    "./ai": {
+      "import": {
+        "types": "./dist/ai/index.d.ts",
+        "default": "./dist/ai/index.js"
+      },
+      "require": {
+        "types": "./dist/ai/index.d.cts",
+        "default": "./dist/ai/index.cjs"
+      }
+    },
+    "./documentation-compiler": {
+      "import": {
+        "types": "./dist/documentation-compiler/index.d.ts",
+        "default": "./dist/documentation-compiler/index.js"
+      },
+      "require": {
+        "types": "./dist/documentation-compiler/index.d.cts",
+        "default": "./dist/documentation-compiler/index.cjs"
+      }
+    },
+    "./renderers": {
+      "import": {
+        "types": "./dist/renderers/index.d.ts",
+        "default": "./dist/renderers/index.js"
+      },
+      "require": {
+        "types": "./dist/renderers/index.d.cts",
+        "default": "./dist/renderers/index.cjs"
+      }
+    },
+    "./incremental": {
+      "import": {
+        "types": "./dist/incremental/index.d.ts",
+        "default": "./dist/incremental/index.js"
+      },
+      "require": {
+        "types": "./dist/incremental/index.d.cts",
+        "default": "./dist/incremental/index.cjs"
+      }
+    },
+    "./content": {
+      "import": {
+        "types": "./dist/content/index.d.ts",
+        "default": "./dist/content/index.js"
+      },
+      "require": {
+        "types": "./dist/content/index.d.cts",
+        "default": "./dist/content/index.cjs"
+      }
+    },
+    "./package.json": "./package.json",
+    "./state": {
+      "import": {
+        "types": "./dist/state/index.d.ts",
+        "default": "./dist/state/index.js"
+      },
+      "require": {
+        "types": "./dist/state/index.d.cts",
+        "default": "./dist/state/index.cjs"
+      }
+    }
+  },
+  "bin": {
+    "docs": "./dist/cli/index.js",
+    "vetwo-docs": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "coverage:open": "vitest run --coverage --reporter=text && open-cli coverage/index.html 2>/dev/null || echo 'Coverage report at coverage/index.html'",
+    "prepublishOnly": "npm run build",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "documentation",
+    "docs",
+    "generator",
+    "markdown",
+    "mdx",
+    "typescript",
+    "api-docs",
+    "devex",
+    "jsdoc",
+    "static-site",
+    "documentation-generator",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vetwo/docs.git",
+    "directory": "packages/docs"
+  },
+  "homepage": "https://github.com/vetwo/docs#readme",
+  "bugs": {
+    "url": "https://github.com/vetwo/docs/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/vetwo"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "dependencies": {
+    "@babel/parser": "^8.0.4",
+    "@resvg/resvg-js": "^2.6.2",
+    "@shikijs/transformers": "^4.4.3",
+    "chalk": "^6.0.0",
+    "chokidar": "^5.0.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^15.0.0",
+    "cosmiconfig": "^10.0.0",
+    "cross-spawn": "^7.0.6",
+    "deepmerge-ts": "^7.1.6",
+    "defu": "^6.1.7",
+    "detect-package-manager": "^3.0.2",
+    "execa": "^10.0.1",
+    "fast-glob": "^3.3.3",
+    "feed": "^6.0.0",
+    "github-slugger": "^2.0.0",
+    "gray-matter": "^4.0.3",
+    "hast-util-to-html": "^9.0.5",
+    "lru-cache": "^11.5.2",
+    "magic-string": "^1.2.0",
+    "mdast-util-to-string": "^4.0.0",
+    "minisearch": "^7.2.0",
+    "mlly": "^1.8.2",
+    "ohash": "^2.0.12",
+    "ora": "^9.4.1",
+    "pagefind": "^1.5.2",
+    "pathe": "^2.0.3",
+    "pkg-types": "^2.3.1",
+    "reading-time": "^1.5.0",
+    "rehype-autolink-headings": "^7.1.0",
+    "rehype-document": "^7.0.3",
+    "rehype-pretty-code": "^0.14.5",
+    "rehype-raw": "^7.0.0",
+    "rehype-slug": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-breaks": "^4.0.0",
+    "remark-directive": "^4.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-mdx": "^3.1.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "remark-smartypants": "^3.0.3",
+    "remark-toc": "^9.0.0",
+    "rimraf": "^6.1.3",
+    "shiki": "^4.4.3",
+    "sitemap": "^9.0.1",
+    "satori": "^0.28.1",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.12.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0",
+    "which-pm-runs": "^2.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.2.17",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.0.0",
+    "knip": "^6.27.0",
+    "lint-staged": "^15.2.0",
+    "open-cli": "^8.0.0",
+    "prettier": "^3.3.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "next": ">=16.2.10",
+    "react": ">=19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    }
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}

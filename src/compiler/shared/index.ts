@@ -1,0 +1,11 @@
+export { resolveRelativeTarget, resolveSpecifiers, isRelativeSpecifier } from "./dependencies.js";
+export type { EventEmitter, EventMap } from "./emitter.js";
+export { createEventEmitter } from "./emitter.js";
+export { fingerprintCompileRequest } from "./fingerprint.js";
+export { hashContent } from "./hash.js";
+export { loadNativeModule } from "./native.js";
+export { nowMs } from "./time.js";
+export { DEFAULT_TREE_LIMITS, limitsFromOptions } from "./tree.js";
+export type { TreeLimits } from "./tree.js";
+export { hasCompilerCapability, validateCompilerCapabilities } from "./capabilities.js";
+export { validateCompilerMetadata } from "./metadata.js";
