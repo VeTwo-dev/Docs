@@ -41,6 +41,30 @@ export interface RenderedSite {
   readonly entrypoint: string;
 }
 
+/** Design tokens consumed from the centralized design system. */
+export interface RendererTheme {
+  readonly colors?: {
+    readonly primary?: string;
+    readonly secondary?: string;
+    readonly background?: string;
+    readonly surface?: string;
+    readonly text?: string;
+    readonly muted?: string;
+    readonly accent?: string;
+  };
+  readonly fonts?: {
+    readonly heading?: string;
+    readonly body?: string;
+    readonly code?: string;
+  };
+}
+
+/** A header navigation link (external repository links, site sections). */
+export interface RendererNavLink {
+  readonly label: string;
+  readonly href: string;
+}
+
 /** Shared renderer options. */
 export interface SiteRendererOptions {
   /** Display name of the documentation site. */
@@ -51,6 +75,12 @@ export interface SiteRendererOptions {
   readonly baseUrl?: string;
   /** Route prefix for doc pages (default `/docs`). */
   readonly docsBasePath?: string;
+  /** Design tokens; renderers fall back to built-in defaults when absent. */
+  readonly theme?: RendererTheme;
+  /** Header navigation links (e.g. GitHub, npm, Issues). */
+  readonly navLinks?: readonly RendererNavLink[];
+  /** Inline SVG markup for the site logo; a monogram is derived when absent. */
+  readonly logoSvg?: string;
 }
 
 /**

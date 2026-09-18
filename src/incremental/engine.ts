@@ -15,7 +15,11 @@ import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSyn
 import { join } from "node:path";
 
 import { compileArchitecture } from "../documentation/compiler/orchestrator.js";
-import type { CompilerProjectInput } from "../documentation/compiler/types.js";
+import type {
+  CompilerProjectInput,
+  DocumentationArchitecture,
+} from "../documentation/compiler/types.js";
+import type { SnapshotFileEntry } from "./snapshot.js";
 
 import {
   createSnapshot,
@@ -92,7 +96,7 @@ export function runIncrementalUpdate(options: IncrementalUpdateOptions): Increme
     const detectionStart = Date.now();
     const previous = loadSnapshot(rootDir);
     const entries = scanProjectFiles(rootDir);
-    const currentFiles: Record<string, import("./snapshot.js").SnapshotFileEntry> = {};
+    const currentFiles: Record<string, SnapshotFileEntry> = {};
     for (const entry of entries) {
       currentFiles[entry.path] = snapshotFileEntry(entry);
     }
@@ -184,7 +188,7 @@ export function runIncrementalUpdate(options: IncrementalUpdateOptions): Increme
 
 /** Derive artifact dependency entries from a compiled architecture. */
 export function artifactsFromArchitecture(
-  architecture: import("../documentation/compiler/types.js").DocumentationArchitecture,
+  architecture: DocumentationArchitecture,
 ): Record<string, ArtifactEntry> {
   const artifacts: Record<string, ArtifactEntry> = {};
 
@@ -307,12 +311,9 @@ export function computeHealth(
   const freshnessPct = total > 0 ? Math.round((fresh / total) * 100) : 100;
   notes.push(`${fresh}/${total} tracked pages are up to date`);
 
-  const consistencyPct =
-    total > 0 ? Math.round(((total - conflictCount) / total) * 100) : 100;
+  const consistencyPct = total > 0 ? Math.round(((total - conflictCount) / total) * 100) : 100;
   notes.push(
-    conflictCount > 0
-      ? `${conflictCount} unresolved generated/user conflict(s)`
-      : "no conflicts",
+    conflictCount > 0 ? `${conflictCount} unresolved generated/user conflict(s)` : "no conflicts",
   );
 
   const coveragePct = total > 0 ? Math.round((total / Math.max(total, 1)) * 100) : 0;

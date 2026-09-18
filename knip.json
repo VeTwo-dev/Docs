@@ -1,5 +1,23 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "docs.config.ts",
+    "vitest.cwd.config.ts",
+    "test/**/*.test.ts"
+  ],
+  "ignoreDependencies": [
+    "@babel/parser",
+    "@shikijs/transformers",
+    "pagefind",
+    "rehype-autolink-headings",
+    "rehype-document",
+    "rehype-pretty-code",
+    "rehype-raw",
+    "remark-breaks",
+    "remark-smartypants",
+    "shiki",
+    "text"
+  ],
   "ignore": [
     "temp/*"
   ],

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveConfigPath, mergePlugins, loadConfig, findMonorepoRoot } from "./loader.js";
-import type { Plugin } from "../../types/internal.js";
+import type { Plugin } from "../types/internal.js";
 
 let tmpDir: string;
 

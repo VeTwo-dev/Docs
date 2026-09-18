@@ -25,7 +25,12 @@ import { planArchitecture } from "./planner.js";
 import { organizeNavigation, buildLearningPaths } from "./organizer.js";
 import { computeCoverage } from "./coverage.js";
 import { resolveCanonicalPages } from "./resolver.js";
-import { validateArchitecture, validateIRPages, validateBreadcrumbs, sortDiagnostics } from "./validator.js";
+import {
+  validateArchitecture,
+  validateIRPages,
+  validateBreadcrumbs,
+  sortDiagnostics,
+} from "./validator.js";
 import { diagnostic } from "./diagnostics.js";
 import type { DocumentationDiagnostic } from "./diagnostics.js";
 import type { DocumentationIR, IRBlock, IRPage, IRSection } from "./ir.js";
@@ -242,7 +247,9 @@ function buildPageBlocks(
         items: personas.map((p) => humanizePersona(p.persona)),
       });
     }
-    const journey = architecture.navigation.primaryJourney.filter((s) => s !== page.slug).slice(0, 4);
+    const journey = architecture.navigation.primaryJourney
+      .filter((s) => s !== page.slug)
+      .slice(0, 4);
     if (journey.length > 0) {
       const titles = new Map(architecture.pages.map((p) => [p.slug, p.title] as const));
       blocks.push({ kind: "heading", level: 2, text: "Where to go next" });
@@ -317,7 +324,11 @@ function buildPageBlocks(
   if (page.kinds.includes("installation")) {
     const pkg = architecture.project.name;
     blocks.push({ kind: "heading", level: 2, text: "Install" });
-    blocks.push({ kind: "code", language: "bash", code: `npm install ${pkg}\n# or\npnpm add ${pkg}\n# or\nyarn add ${pkg}` });
+    blocks.push({
+      kind: "code",
+      language: "bash",
+      code: `npm install ${pkg}\n# or\npnpm add ${pkg}\n# or\nyarn add ${pkg}`,
+    });
     blocks.push({ kind: "heading", level: 2, text: "Requirements" });
     blocks.push({ kind: "paragraph", text: "Node.js >= 20 is required. Verify with `node -v`." });
   }
@@ -331,7 +342,8 @@ function buildPageBlocks(
     const install = bySlug.get("installation");
     if (install !== undefined) steps.push(`Install — see \`${install.title}\``);
     const firstCommand = architecture.pages.find((p) => p.kinds.includes("cli-command"));
-    if (firstCommand !== undefined) steps.push(`Run your first command — see \`${firstCommand.title}\``);
+    if (firstCommand !== undefined)
+      steps.push(`Run your first command — see \`${firstCommand.title}\``);
     const configuration = bySlug.get("configuration");
     if (configuration !== undefined) steps.push(`Configure — see \`${configuration.title}\``);
     const api = architecture.pages.find((p) => p.kinds.includes("api"));
@@ -358,7 +370,12 @@ function buildPageBlocks(
       if (verified.purpose !== undefined && verified.purpose.length > 0) {
         blocks.push({ kind: "paragraph", text: verified.purpose });
       }
-      blocks.push({ kind: "code", language: verified.language, code: verified.code, title: verified.title });
+      blocks.push({
+        kind: "code",
+        language: verified.language,
+        code: verified.code,
+        title: verified.title,
+      });
       blocks.push({
         kind: "paragraph",
         text: `See \`${verified.owner}\` in the API reference for full signature and options.`,
@@ -407,31 +424,123 @@ function buildPageBlocks(
 
   // Security/performance pages: callouts with evidence.
   if (page.kinds.includes("security")) {
-    blocks.push({ kind: "callout", tone: "warning", text: "Never commit secrets. Use environment variables and `.env` excluded from the scanner." });
-    const envEvidence = page.evidence.filter((e) => e.kind === "config" && e.value.startsWith("env:"));
+    blocks.push({
+      kind: "callout",
+      tone: "warning",
+      text: "Never commit secrets. Use environment variables and `.env` excluded from the scanner.",
+    });
+    const envEvidence = page.evidence.filter(
+      (e) => e.kind === "config" && e.value.startsWith("env:"),
+    );
     if (envEvidence.length > 0) {
-      blocks.push({ kind: "table", headers: ["Variable", "Purpose"], rows: envEvidence.map((e) => [e.value, "Secret — redacted at build"] ) });
+      blocks.push({
+        kind: "table",
+        headers: ["Variable", "Purpose"],
+        rows: envEvidence.map((e) => [e.value, "Secret — redacted at build"]),
+      });
     }
   }
   if (page.kinds.includes("performance")) {
-    blocks.push({ kind: "list", ordered: false, items: ["Cache under `.vetwo/docs/` with integrity check", "Incremental builds via `fileHashes`", "Watch mode via chokidar", "Bounded concurrency for type formatting"] });
+    blocks.push({
+      kind: "list",
+      ordered: false,
+      items: [
+        "Cache under `.vetwo/docs/` with integrity check",
+        "Incremental builds via `fileHashes`",
+        "Watch mode via chokidar",
+        "Bounded concurrency for type formatting",
+      ],
+    });
   }
 
-  // Development / testing / building pages.
+  // Development / testing / building / publishing pages render the project's
+  // real scripts (evidence kind "script"). Package-manager invocation is shown
+  // npm-style; every listed script exists in package.json#scripts.
+  const scriptNames = (filter?: RegExp): string[] =>
+    page.evidence
+      .filter((e) => e.kind === "script" && (filter === undefined || filter.test(e.value)))
+      .map((e) => e.value);
   if (page.kinds.includes("development")) {
-    blocks.push({ kind: "code", language: "bash", code: "pnpm install\npnpm dev\npnpm test\npnpm build" });
+    const all = scriptNames();
+    if (all.length > 0) {
+      blocks.push({ kind: "heading", level: 2, text: "Scripts" });
+      blocks.push({
+        kind: "code",
+        language: "bash",
+        code: all.map((s) => `npm run ${s}`).join("\n"),
+      });
+    }
   }
   if (page.kinds.includes("testing")) {
-    blocks.push({ kind: "paragraph", text: "Tests use Vitest. Run `pnpm test` or `pnpm coverage`." });
+    const tests = scriptNames(/test|vitest|jest|playwright|cypress/i);
+    if (tests.length > 0) {
+      blocks.push({
+        kind: "code",
+        language: "bash",
+        code: tests.map((s) => `npm run ${s}`).join("\n"),
+      });
+    }
   }
   if (page.kinds.includes("building")) {
-    blocks.push({ kind: "paragraph", text: "Build via `tsup` to `dist/`; output is declared in `package.json#exports`." });
+    const builds = scriptNames(/build|compile|tsup|vite|webpack|rollup|esbuild/i);
+    if (builds.length > 0) {
+      blocks.push({
+        kind: "code",
+        language: "bash",
+        code: builds.map((s) => `npm run ${s}`).join("\n"),
+      });
+    }
+  }
+  if (page.kinds.includes("publishing")) {
+    const rel = scriptNames();
+    if (rel.length > 0) {
+      blocks.push({ kind: "heading", level: 2, text: "Release scripts" });
+      blocks.push({
+        kind: "code",
+        language: "bash",
+        code: rel.map((s) => `npm run ${s}`).join("\n"),
+      });
+    }
+  }
+  // Packages (monorepo catalog): real workspace members only.
+  if (page.slug === "packages") {
+    const pkgs = page.evidence.filter((e) => e.kind === "package").map((e) => e.value);
+    if (pkgs.length > 0) {
+      blocks.push({ kind: "heading", level: 2, text: "Packages" });
+      blocks.push({ kind: "list", ordered: false, items: pkgs.map((p) => `\`${p}\``) });
+    }
+  }
+  // Operations: production environment from real env evidence.
+  if (page.slug === "operations") {
+    const env = page.evidence.filter((e) => e.kind === "config" && e.value.startsWith("env:"));
+    if (env.length > 0) {
+      blocks.push({ kind: "heading", level: 2, text: "Environment" });
+      blocks.push({
+        kind: "table",
+        headers: ["Variable", "Notes"],
+        rows: env.map((e) => [`\`${e.value.slice(4)}\``, "Secret — redacted at build"]),
+      });
+    }
+  }
+  // Plugins: real plugin evidence only.
+  if (page.slug === "plugins") {
+    const plugins = page.evidence.filter((e) => e.kind === "dependency" || e.kind === "graph");
+    if (plugins.length > 0) {
+      blocks.push({ kind: "heading", level: 2, text: "Plugins" });
+      blocks.push({ kind: "list", ordered: false, items: plugins.map((e) => `\`${e.value}\``) });
+    }
   }
   if (page.kinds.includes("contributing")) {
-    blocks.push({ kind: "paragraph", text: "See repository for code style (Prettier + ESLint), PR workflow and release process." });
+    blocks.push({
+      kind: "paragraph",
+      text: "See repository for code style (Prettier + ESLint), PR workflow and release process.",
+    });
   }
   if (page.kinds.includes("changelog") || page.kinds.includes("release-notes")) {
-    blocks.push({ kind: "paragraph", text: "See `CHANGELOG.md` and git tags for version history." });
+    blocks.push({
+      kind: "paragraph",
+      text: "See `CHANGELOG.md` and git tags for version history.",
+    });
   }
   // Concepts: member lists from graph evidence + related APIs from symbols.
   // Evidence-carried descriptions render; nothing is invented. The page's own
@@ -440,7 +549,9 @@ function buildPageBlocks(
   if (page.kinds.includes("concept")) {
     const selfKey = page.title.toLowerCase();
     const selfEvidence = page.evidence.find(
-      (e) => e.kind === "graph" && (e.value.toLowerCase() === selfKey || e.value.toLowerCase() === page.slug.toLowerCase()),
+      (e) =>
+        e.kind === "graph" &&
+        (e.value.toLowerCase() === selfKey || e.value.toLowerCase() === page.slug.toLowerCase()),
     );
     if (selfEvidence?.description !== undefined && selfEvidence.description.length > 0) {
       blocks.push({ kind: "paragraph", text: selfEvidence.description });
@@ -730,9 +841,7 @@ function groupApiSymbolsByKind(
 }
 
 /** Build rich IR blocks for a single API symbol. */
-function buildRichApiSymbolBlocks(
-  sym: ApiSymbolEntry,
-): IRBlock[] {
+function buildRichApiSymbolBlocks(sym: ApiSymbolEntry): IRBlock[] {
   const blocks: IRBlock[] = [];
 
   // Signature block
@@ -839,11 +948,7 @@ function buildRichApiSymbolBlocks(
     blocks.push({
       kind: "table",
       headers: ["Member", "Value", "Description"],
-      rows: sym.enumMembers.map((m) => [
-        `\`${m.name}\``,
-        `\`${String(m.value)}\``,
-        m.description,
-      ]),
+      rows: sym.enumMembers.map((m) => [`\`${m.name}\``, `\`${String(m.value)}\``, m.description]),
     });
   }
 
@@ -884,9 +989,7 @@ function buildRichApiSymbolBlocks(
 }
 
 /** Build a human-readable signature string for a symbol. */
-function buildSymbolSignature(
-  sym: ApiSymbolEntry,
-): string {
+function buildSymbolSignature(sym: ApiSymbolEntry): string {
   switch (sym.kind) {
     case "function": {
       const params =

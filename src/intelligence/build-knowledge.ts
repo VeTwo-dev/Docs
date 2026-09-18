@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { discoverIdentity } from "./discovery/identity.js";
 import { discoverPurpose } from "./discovery/purpose.js";
 import type { ProjectKnowledge } from "./knowledge.js";
+import type { CompilerProjectInput, SymbolBoundary } from "../documentation/compiler/types.js";
 import type { ApiSymbol } from "../api/models.js";
 import type { KnowledgeGraph } from "../graph/index.js";
 
@@ -16,40 +17,88 @@ export interface BuildKnowledgeInput {
   readonly rootDir: string;
   readonly apiSymbols?: readonly ApiSymbol[];
   readonly graph?: KnowledgeGraph;
-  readonly signals?: { commands?: readonly { name: string; description?: string }[]; configKeys?: readonly string[]; examples?: readonly string[]; hasBin?: boolean; isMonorepo?: boolean; framework?: string };
+  readonly signals?: {
+    commands?: readonly { name: string; description?: string }[];
+    configKeys?: readonly string[];
+    examples?: readonly string[];
+    hasBin?: boolean;
+    isMonorepo?: boolean;
+    framework?: string;
+  };
   readonly packageJson?: Record<string, unknown>;
 }
 
+/**
+ * Builds deterministic project knowledge from the repository (no AI).
+ *
+ * @param input - Root directory, optional API symbols, graph and signals.
+ * @returns Complete project knowledge model for the documentation compiler.
+ */
 export async function buildProjectKnowledge(input: BuildKnowledgeInput): Promise<ProjectKnowledge> {
-  const identity = discoverIdentity(input.rootDir, { framework: input.signals?.framework, hasBin: input.signals?.hasBin, isMonorepo: input.signals?.isMonorepo });
+  const identity = discoverIdentity(input.rootDir, {
+    framework: input.signals?.framework,
+    hasBin: input.signals?.hasBin,
+    isMonorepo: input.signals?.isMonorepo,
+  });
   const purposeRaw = discoverPurpose(input.rootDir, identity.description);
   const pkgName = identity.packageName;
   const pm = identity.packageManager;
-  const installMap: Record<string, string> = { npm: `npm install ${pkgName}`, pnpm: `pnpm add ${pkgName}`, yarn: `yarn add ${pkgName}`, bun: `bun add ${pkgName}` };
+  const installMap: Record<string, string> = {
+    npm: `npm install ${pkgName}`,
+    pnpm: `pnpm add ${pkgName}`,
+    yarn: `yarn add ${pkgName}`,
+    bun: `bun add ${pkgName}`,
+  };
 
   // Wire API symbols via semantic analyzer if not provided (best-effort, never throws)
   let apiSymbols = input.apiSymbols;
   if (apiSymbols === undefined) {
     try {
       const { analyzeAPIs } = await import("../api/analyzer.js");
-      const result = await analyzeAPIs({ rootDir: input.rootDir, exclude: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**", "fixtures/**", "docs/**", "dist/**", "node_modules/**"] });
-      apiSymbols = result.symbols.filter(s => s.boundary === "public" || s.boundary === "semi-public").slice(0, 500);
+      const result = await analyzeAPIs({
+        rootDir: input.rootDir,
+        exclude: [
+          "**/*.test.*",
+          "**/*.spec.*",
+          "**/__tests__/**",
+          "fixtures/**",
+          "docs/**",
+          "dist/**",
+          "node_modules/**",
+        ],
+      });
+      apiSymbols = result.symbols
+        .filter((s) => s.boundary === "public" || s.boundary === "semi-public")
+        .slice(0, 500);
     } catch {
       apiSymbols = [];
     }
   }
 
   // Real package.json scripts for development docs
-  let scripts: Record<string, string> = (input.packageJson?.["scripts"] as Record<string,string> | undefined) ?? {};
+  let scripts: Record<string, string> =
+    (input.packageJson?.["scripts"] as Record<string, string> | undefined) ?? {};
   if (Object.keys(scripts).length === 0) {
     try {
-      const pkg = JSON.parse(readFileSync(join(input.rootDir, "package.json"), "utf8")) as Record<string, unknown>;
-      scripts = (pkg["scripts"] as Record<string,string> | undefined) ?? {};
-    } catch {}
+      const pkg = JSON.parse(readFileSync(join(input.rootDir, "package.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      scripts = (pkg["scripts"] as Record<string, string> | undefined) ?? {};
+    } catch {
+      // Best-effort discovery — ignore unreadable entries.
+    }
   }
 
   // Classify scripts into buckets (development/testing/validation/build/publishing)
-  const scriptBuckets: Record<string, readonly string[]> = { development: [], testing: [], validation: [], build: [], publishing: [], maintenance: [] };
+  const scriptBuckets: Record<string, readonly string[]> = {
+    development: [],
+    testing: [],
+    validation: [],
+    build: [],
+    publishing: [],
+    maintenance: [],
+  };
   {
     const mutable = scriptBuckets as Record<string, string[]>;
     for (const [name, cmd] of Object.entries(scripts)) {
@@ -62,20 +111,55 @@ export async function buildProjectKnowledge(input: BuildKnowledgeInput): Promise
       else mutable["maintenance"]!.push(name);
     }
   }
-  const testRunner = scripts["test"]?.includes("vitest") ? "vitest" : scripts["test"]?.includes("jest") ? "jest" : scripts["test"] ? "npm test" : undefined;
-  const buildSystem = scripts["build"]?.includes("tsup") ? "tsup" : scripts["build"]?.includes("vite") ? "vite" : scripts["build"] ? "npm run build" : undefined;
+  const testRunner = scripts["test"]?.includes("vitest")
+    ? "vitest"
+    : scripts["test"]?.includes("jest")
+      ? "jest"
+      : scripts["test"]
+        ? "npm test"
+        : undefined;
+  const buildSystem = scripts["build"]?.includes("tsup")
+    ? "tsup"
+    : scripts["build"]?.includes("vite")
+      ? "vite"
+      : scripts["build"]
+        ? "npm run build"
+        : undefined;
 
   return {
     identity,
-    purpose: { summary: purposeRaw.summary, capabilities: purposeRaw.capabilities, audiences: purposeRaw.audiences, confidence: "repository-derived" },
-    installation: { packageManager: pm, installCommand: installMap[pm] ?? `npm install ${pkgName}`, runtimeRequirements: identity.runtime ? [identity.runtime] : ["Node.js >= 20"] },
-    configuration: { configFiles: ["docs.config.ts", "package.json"], configKeys: (input.signals?.configKeys ?? []).map(k => ({ key: k })), envVars: [] },
+    purpose: {
+      summary: purposeRaw.summary,
+      capabilities: purposeRaw.capabilities,
+      audiences: purposeRaw.audiences,
+      confidence: "repository-derived",
+    },
+    installation: {
+      packageManager: pm,
+      installCommand: installMap[pm] ?? `npm install ${pkgName}`,
+      runtimeRequirements: identity.runtime ? [identity.runtime] : ["Node.js >= 20"],
+    },
+    configuration: {
+      configFiles: ["docs.config.ts", "package.json"],
+      configKeys: (input.signals?.configKeys ?? []).map((k) => ({ key: k })),
+      envVars: [],
+    },
     api: { symbols: apiSymbols ?? [] },
-    cli: { commands: (input.signals?.commands ?? []).map(c => ({ name: c.name, description: c.description })) },
+    cli: {
+      commands: (input.signals?.commands ?? []).map((c) => ({
+        name: c.name,
+        description: c.description,
+      })),
+    },
     architecture: discoverArchitecture(input.rootDir),
     dependencies: { runtime: [], peer: [], dev: [], important: [] },
     environment: [],
-    examples: { discovered: (input.signals?.examples ?? []).map(e => ({ title: e, source: "examples" as const })) },
+    examples: {
+      discovered: (input.signals?.examples ?? []).map((e) => ({
+        title: e,
+        source: "examples" as const,
+      })),
+    },
     development: { scripts, testRunner, buildSystem, scriptBuckets },
     graph: input.graph,
     raw: { packageJson: input.packageJson, readmeExcerpt: purposeRaw.summary },
@@ -93,13 +177,15 @@ function discoverArchitecture(rootDir: string): ProjectKnowledge["architecture"]
   try {
     const srcDir = join(rootDir, "src");
     const entries: string[] = existsSync(srcDir) ? readdirSync(srcDir) : [];
-    const dirs = entries.filter((e) => {
-      try {
-        return statSync(join(srcDir, e)).isDirectory();
-      } catch {
-        return false;
-      }
-    }).slice(0, 12);
+    const dirs = entries
+      .filter((e) => {
+        try {
+          return statSync(join(srcDir, e)).isDirectory();
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 12);
     if (dirs.length === 0) {
       // Single-level src: treat index files as the module surface.
       const files = entries.filter((e) => /\.(ts|js|tsx|jsx)$/.test(e)).slice(0, 20);
@@ -107,7 +193,10 @@ function discoverArchitecture(rootDir: string): ProjectKnowledge["architecture"]
         const names = files.flatMap((f) => extractExportedNames(join(srcDir, f))).slice(0, 8);
         modules.push({
           path: "src/",
-          responsibility: names.length > 0 ? `Exports ${names.join(", ")}` : `Source entry (${files.length} files)`,
+          responsibility:
+            names.length > 0
+              ? `Exports ${names.join(", ")}`
+              : `Source entry (${files.length} files)`,
         });
       }
     }
@@ -119,12 +208,16 @@ function discoverArchitecture(rootDir: string): ProjectKnowledge["architecture"]
       } catch {
         files = [];
       }
-      const names = files.slice(0, 10).flatMap((f) => extractExportedNames(join(dirPath, f))).slice(0, 6);
+      const names = files
+        .slice(0, 10)
+        .flatMap((f) => extractExportedNames(join(dirPath, f)))
+        .slice(0, 6);
       modules.push({
         path: `src/${dir}`,
-        responsibility: names.length > 0
-          ? `Exports ${names.join(", ")}${files.length > 10 ? ` (+${files.length - 10} more files)` : ""}`
-          : `Source module (${files.length} files)`,
+        responsibility:
+          names.length > 0
+            ? `Exports ${names.join(", ")}${files.length > 10 ? ` (+${files.length - 10} more files)` : ""}`
+            : `Source module (${files.length} files)`,
       });
       structure.push({ path: `src/${dir}/`, explanation: `${files.length} source files` });
     }
@@ -150,7 +243,8 @@ function extractExportedNames(file: string): string[] {
   try {
     const text = readFileSync(file, "utf8");
     const names: string[] = [];
-    const re = /export\s+(?:default\s+)?(?:async\s+)?(?:function|class|interface|type|enum|const|let|var)\s+([A-Za-z_$][\w$]*)/g;
+    const re =
+      /export\s+(?:default\s+)?(?:async\s+)?(?:function|class|interface|type|enum|const|let|var)\s+([A-Za-z_$][\w$]*)/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null && names.length < 8) {
       if (m[1] !== undefined) names.push(m[1]);
@@ -162,7 +256,10 @@ function extractExportedNames(file: string): string[] {
 }
 
 /** Map ProjectKnowledge to CompilerProjectInput (reuse existing pipeline). */
-export function knowledgeToCompilerInput(knowledge: ProjectKnowledge, rootDir: string): import("../documentation/compiler/types.js").CompilerProjectInput {
+export function knowledgeToCompilerInput(
+  knowledge: ProjectKnowledge,
+  rootDir: string,
+): CompilerProjectInput {
   return {
     rootDir,
     // Use full packageName so install/quick-start emit `npm install @scope/name`, not bare displayName
@@ -174,12 +271,25 @@ export function knowledgeToCompilerInput(knowledge: ProjectKnowledge, rootDir: s
       hasCli: knowledge.cli.commands.length > 0,
       isMonorepo: knowledge.identity.isMonorepo,
       framework: knowledge.identity.framework,
-      configKeys: knowledge.configuration.configKeys.map(k => k.key),
-      commands: knowledge.cli.commands.map(c => ({ name: c.name, description: c.description })),
-      examples: knowledge.examples.discovered.map(e => e.title),
+      configKeys: knowledge.configuration.configKeys.map((k) => k.key),
+      commands: knowledge.cli.commands.map((c) => ({ name: c.name, description: c.description })),
+      examples: knowledge.examples.discovered.map((e) => e.title),
+      scripts: Object.keys(knowledge.development.scripts),
     },
-    apis: knowledge.api.symbols.map(s => ({ name: s.name, kind: s.kind, signature: s.returnType, description: s.documentation.summary, sourceFile: s.sourceFile, boundary: s.boundary as import("../documentation/compiler/types.js").SymbolBoundary, deprecated: s.deprecated !== false })),
-    apiSymbols: knowledge.api.symbols as unknown as import("../documentation/compiler/types.js").CompilerProjectInput["apiSymbols"],
-    concepts: knowledge.architecture.modules.map(m => ({ name: m.path, kind: "module", description: m.responsibility })),
+    apis: knowledge.api.symbols.map((s) => ({
+      name: s.name,
+      kind: s.kind,
+      signature: s.returnType,
+      description: s.documentation.summary,
+      sourceFile: s.sourceFile,
+      boundary: s.boundary as SymbolBoundary,
+      deprecated: s.deprecated !== false,
+    })),
+    apiSymbols: knowledge.api.symbols as unknown as CompilerProjectInput["apiSymbols"],
+    concepts: knowledge.architecture.modules.map((m) => ({
+      name: m.path,
+      kind: "module",
+      description: m.responsibility,
+    })),
   };
 }

@@ -78,7 +78,7 @@ function calloutLabel(tone: "note" | "warning" | "deprecated" | "tip"): string {
  * Only allows alphanumeric characters, hyphens, and dots.
  */
 function sanitizeComponentName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9.\-]/g, "");
+  return name.replace(/[^a-zA-Z0-9.-]/g, "");
 }
 
 /**

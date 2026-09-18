@@ -32,7 +32,8 @@ import { parseDocComment } from "./jsdoc-parser.js";
 import { formatType } from "./type-formatter.js";
 
 // TypeScript is loaded dynamically — it's an optional peer dependency.
-type TS = typeof import("typescript");
+import type * as tsTypes from "typescript";
+type TS = typeof tsTypes;
 
 /** Extensions analyzed by the semantic analyzer. */
 const ANALYZABLE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs"]);
@@ -75,12 +76,29 @@ function findTsconfig(rootDir: string): string | undefined {
 async function discoverFallbackFiles(rootDir: string, _ts: TS): Promise<string[]> {
   try {
     const fg = await import("fast-glob");
-    const glob = (fg as unknown as { globSync: (p: string[], o: unknown) => string[] }).globSync ?? (fg as unknown as { default: { globSync: (p: string[], o: unknown) => string[] } }).default?.globSync;
+    const glob =
+      (fg as unknown as { globSync: (p: string[], o: unknown) => string[] }).globSync ??
+      (fg as unknown as { default: { globSync: (p: string[], o: unknown) => string[] } }).default
+        ?.globSync;
     if (glob) {
-      const files = glob(["src/**/*.{ts,tsx,js,jsx}", "lib/**/*.{ts,tsx}"], { cwd: rootDir, absolute: true, ignore: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**", "node_modules/**", "dist/**"] });
+      const files = glob(
+        [
+          "src/**/*.{ts,tsx,js,jsx}",
+          "lib/**/*.{ts,tsx}",
+          "packages/*/src/**/*.{ts,tsx,js,jsx}",
+          "apps/*/src/**/*.{ts,tsx,js,jsx}",
+        ],
+        {
+          cwd: rootDir,
+          absolute: true,
+          ignore: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**", "node_modules/**", "dist/**"],
+        },
+      );
       return files.slice(0, 200);
     }
-  } catch {}
+  } catch {
+    // Best-effort discovery — ignore unreadable entries.
+  }
   return [];
 }
 
@@ -105,7 +123,11 @@ function shouldAnalyze(filePath: string, exclude: readonly string[]): boolean {
 }
 
 /** Whether a tsconfig-provided absolute file should enter the program. */
-function keepProgramFile(absolutePath: string, rootDir: string, exclude: readonly string[]): boolean {
+function keepProgramFile(
+  absolutePath: string,
+  rootDir: string,
+  exclude: readonly string[],
+): boolean {
   const normalized = absolutePath.replace(/\\/g, "/");
   const rel = normalized.startsWith(rootDir) ? normalized.slice(rootDir.length + 1) : normalized;
   for (const dir of [...ALWAYS_EXCLUDED, ...DEFAULT_EXCLUDED]) {
@@ -115,10 +137,7 @@ function keepProgramFile(absolutePath: string, rootDir: string, exclude: readonl
 }
 
 /** Classify an API symbol's boundary based on name conventions and modifiers. */
-function classifyBoundary(
-  symbol: import("typescript").Symbol,
-  ts: TS,
-): ApiBoundary {
+function classifyBoundary(symbol: tsTypes.Symbol, ts: TS): ApiBoundary {
   const name = symbol.getName();
   if (name.startsWith("_")) return "internal";
   const tags = symbol.getJsDocTags(undefined);
@@ -129,7 +148,7 @@ function classifyBoundary(
   const declarations = symbol.getDeclarations();
   if (declarations !== undefined && declarations.length > 0) {
     const decl = declarations[0];
-    const modFlags = ts.getCombinedModifierFlags(decl as import("typescript").Declaration);
+    const modFlags = ts.getCombinedModifierFlags(decl as tsTypes.Declaration);
     if (modFlags & ts.ModifierFlags.Private) return "private";
     if (modFlags & ts.ModifierFlags.Protected) return "semi-public";
   }
@@ -155,14 +174,14 @@ export async function analyzeAPIs(options: SemanticAnalyzerOptions): Promise<Api
   if (ts === undefined) {
     throw new Error(
       'The "typescript" package is required for semantic API analysis. ' +
-        'Install it with: npm install typescript',
+        "Install it with: npm install typescript",
     );
   }
 
   const rootDir = options.rootDir;
   const tsconfigPath = options.tsconfigPath ?? findTsconfig(rootDir);
 
-  let program: import("typescript").Program;
+  let program: tsTypes.Program;
   if (tsconfigPath !== undefined) {
     const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
     if (configFile.error !== undefined) {
@@ -177,13 +196,14 @@ export async function analyzeAPIs(options: SemanticAnalyzerOptions): Promise<Api
       undefined,
       undefined,
     );
-    const listed = parsed.fileNames.length > 0 ? parsed.fileNames : await discoverFallbackFiles(rootDir, ts);
+    const listed =
+      parsed.fileNames.length > 0 ? parsed.fileNames : await discoverFallbackFiles(rootDir, ts);
     // tsconfig include patterns (or their **/* default) can match generated
     // output, build dirs and fixtures — never analyze those as source.
     const fileNames = listed.filter((f) => keepProgramFile(f, rootDir, options.exclude ?? []));
     program = ts.createProgram(fileNames, parsed.options);
   } else {
-    const defaultOptions: import("typescript").CompilerOptions = {
+    const defaultOptions: tsTypes.CompilerOptions = {
       target: ts.ScriptTarget.ESNext,
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.Bundler,
@@ -199,11 +219,11 @@ export async function analyzeAPIs(options: SemanticAnalyzerOptions): Promise<Api
 
   const checker = program.getTypeChecker();
   const exclude = options.exclude ?? [];
-  const sourceFiles = program.getSourceFiles().filter(
-    (sf) =>
-      !sf.isDeclarationFile &&
-      shouldAnalyze(relativePath(sf.fileName, rootDir), exclude),
-  );
+  const sourceFiles = program
+    .getSourceFiles()
+    .filter(
+      (sf) => !sf.isDeclarationFile && shouldAnalyze(relativePath(sf.fileName, rootDir), exclude),
+    );
 
   const symbols: ApiSymbol[] = [];
 
@@ -240,10 +260,10 @@ export async function analyzeAPIs(options: SemanticAnalyzerOptions): Promise<Api
 
 /** Extract top-level exported symbols from a declaration node. */
 function extractTopLevelSymbols(
-  node: import("typescript").Node,
+  node: tsTypes.Node,
   ts: TS,
-  checker: import("typescript").TypeChecker,
-  sourceFile: import("typescript").SourceFile,
+  checker: tsTypes.TypeChecker,
+  sourceFile: tsTypes.SourceFile,
   filePath: string,
   rootDir: string,
   symbols: ApiSymbol[],
@@ -259,7 +279,16 @@ function extractTopLevelSymbols(
   if (symbol === undefined) return;
 
   try {
-    const apiSymbol = convertSymbol(symbol, node, ts, checker, sourceFile, filePath, rootDir, options);
+    const apiSymbol = convertSymbol(
+      symbol,
+      node,
+      ts,
+      checker,
+      sourceFile,
+      filePath,
+      rootDir,
+      options,
+    );
     if (apiSymbol !== undefined) symbols.push(apiSymbol);
   } catch {
     // Skip symbols that fail semantic analysis
@@ -267,7 +296,7 @@ function extractTopLevelSymbols(
 }
 
 /** Get the name node of a declaration. */
-function getNameNode(node: import("typescript").Node, ts: TS): import("typescript").Node | undefined {
+function getNameNode(node: tsTypes.Node, ts: TS): tsTypes.Node | undefined {
   if (
     ts.isFunctionDeclaration(node) ||
     ts.isClassDeclaration(node) ||
@@ -286,7 +315,7 @@ function getNameNode(node: import("typescript").Node, ts: TS): import("typescrip
 }
 
 /** Check if a node is exported. */
-function isExported(node: import("typescript").Node, ts: TS, _sourceFile: import("typescript").SourceFile): boolean {
+function isExported(node: tsTypes.Node, ts: TS, _sourceFile: tsTypes.SourceFile): boolean {
   if (ts.isExportAssignment(node)) return true;
   if (ts.canHaveModifiers(node)) {
     const modifiers = ts.getModifiers(node);
@@ -301,11 +330,11 @@ function isExported(node: import("typescript").Node, ts: TS, _sourceFile: import
 
 /** Convert a TypeScript symbol into an ApiSymbol. */
 function convertSymbol(
-  symbol: import("typescript").Symbol,
-  node: import("typescript").Node,
+  symbol: tsTypes.Symbol,
+  node: tsTypes.Node,
   ts: TS,
-  checker: import("typescript").TypeChecker,
-  sourceFile: import("typescript").SourceFile,
+  checker: tsTypes.TypeChecker,
+  sourceFile: tsTypes.SourceFile,
   filePath: string,
   rootDir: string,
   options: SemanticAnalyzerOptions,
@@ -339,7 +368,18 @@ function convertSymbol(
       ? ts.displayPartsToString(sinceTag.text)
       : undefined;
 
-  const base: Omit<ApiSymbol, "kind" | "members" | "enumMembers" | "parameters" | "overloads" | "returnType" | "typeParameters" | "extends" | "implements"> = {
+  const base: Omit<
+    ApiSymbol,
+    | "kind"
+    | "members"
+    | "enumMembers"
+    | "parameters"
+    | "overloads"
+    | "returnType"
+    | "typeParameters"
+    | "extends"
+    | "implements"
+  > = {
     id,
     name,
     qualifiedName,
@@ -361,18 +401,44 @@ function convertSymbol(
       const returnType =
         sig !== undefined ? formatType(sig.getReturnType(), checker, { maxDepth: 4 }) : undefined;
       const typeParams = sig !== undefined ? extractTypeParameters(sig, ts) : undefined;
-      const overloads = extractOverloads(symbol, ts, checker, sourceFile, filePath, rootDir, options);
-      return { ...base, kind, parameters, returnType, typeParameters: typeParams, overloads: overloads.length > 0 ? overloads : undefined };
+      const overloads = extractOverloads(
+        symbol,
+        ts,
+        checker,
+        sourceFile,
+        filePath,
+        rootDir,
+        options,
+      );
+      return {
+        ...base,
+        kind,
+        parameters,
+        returnType,
+        typeParameters: typeParams,
+        overloads: overloads.length > 0 ? overloads : undefined,
+      };
     }
 
     case "class": {
-      const members = extractClassMembers(symbol, ts, checker, sourceFile, filePath, rootDir, options);
+      const members = extractClassMembers(
+        symbol,
+        ts,
+        checker,
+        sourceFile,
+        filePath,
+        rootDir,
+        options,
+      );
       let extendsType: string | undefined;
       try {
-        const classType = type as import("typescript").InterfaceType;
+        const classType = type as tsTypes.InterfaceType;
         const baseTypes = checker.getBaseTypes(classType);
-        extendsType = baseTypes.length > 0 ? checker.typeToString(baseTypes[0] as import("typescript").Type) : undefined;
-      } catch { extendsType = undefined; }
+        extendsType =
+          baseTypes.length > 0 ? checker.typeToString(baseTypes[0] as tsTypes.Type) : undefined;
+      } catch {
+        extendsType = undefined;
+      }
       // Get implemented interfaces from the class declaration
       const implementsTypes: string[] = [];
       if (ts.isClassDeclaration(node) && node.heritageClauses !== undefined) {
@@ -385,21 +451,47 @@ function convertSymbol(
         }
       }
       const ctorSig = type.getConstructSignatures()[0];
-      const parameters = ctorSig !== undefined ? extractParameters(ctorSig, checker, ts) : undefined;
+      const parameters =
+        ctorSig !== undefined ? extractParameters(ctorSig, checker, ts) : undefined;
       const typeParams = extractTypeParametersFromClass(node, ts);
-      return { ...base, kind: "class", members, extends: extendsType, implements: implementsTypes.length > 0 ? implementsTypes : undefined, parameters, typeParameters: typeParams };
+      return {
+        ...base,
+        kind: "class",
+        members,
+        extends: extendsType,
+        implements: implementsTypes.length > 0 ? implementsTypes : undefined,
+        parameters,
+        typeParameters: typeParams,
+      };
     }
 
     case "interface": {
-      const members = extractInterfaceMembers(symbol, ts, checker, sourceFile, filePath, rootDir, options);
+      const members = extractInterfaceMembers(
+        symbol,
+        ts,
+        checker,
+        sourceFile,
+        filePath,
+        rootDir,
+        options,
+      );
       let extendsType: string | undefined;
       try {
-        const ifaceType = type as import("typescript").InterfaceType;
+        const ifaceType = type as tsTypes.InterfaceType;
         const baseTypes = checker.getBaseTypes(ifaceType);
-        extendsType = baseTypes.length > 0 ? checker.typeToString(baseTypes[0] as import("typescript").Type) : undefined;
-      } catch { extendsType = undefined; }
+        extendsType =
+          baseTypes.length > 0 ? checker.typeToString(baseTypes[0] as tsTypes.Type) : undefined;
+      } catch {
+        extendsType = undefined;
+      }
       const typeParams = extractTypeParametersFromClass(node, ts);
-      return { ...base, kind: "interface", members, extends: extendsType, typeParameters: typeParams };
+      return {
+        ...base,
+        kind: "interface",
+        members,
+        extends: extendsType,
+        typeParameters: typeParams,
+      };
     }
 
     case "type-alias": {
@@ -426,9 +518,9 @@ function convertSymbol(
 
 /** Classify the kind of a symbol based on its declaration. */
 function classifyKind(
-  node: import("typescript").Node,
-  _symbol: import("typescript").Symbol,
-  _checker: import("typescript").TypeChecker,
+  node: tsTypes.Node,
+  _symbol: tsTypes.Symbol,
+  _checker: tsTypes.TypeChecker,
   ts: TS,
 ): ApiSymbolKind | undefined {
   if (ts.isFunctionDeclaration(node)) return "function";
@@ -438,7 +530,8 @@ function classifyKind(
   if (ts.isEnumDeclaration(node)) return "enum";
   if (ts.isVariableDeclaration(node)) {
     // Check if the variable has a `const` modifier
-    const isConst = ts.canHaveModifiers(node) &&
+    const isConst =
+      ts.canHaveModifiers(node) &&
       ts.getModifiers(node)?.some((m) => m.kind === ts.SyntaxKind.ConstKeyword);
     return isConst ? "constant" : "variable";
   }
@@ -451,7 +544,12 @@ function classifyKind(
 }
 
 /** Build a qualified name for a symbol. */
-function buildQualifiedName(symbol: import("typescript").Symbol, checker: import("typescript").TypeChecker, ts: TS, _filePath: string): string {
+function buildQualifiedName(
+  symbol: tsTypes.Symbol,
+  checker: tsTypes.TypeChecker,
+  ts: TS,
+  _filePath: string,
+): string {
   const parent = symbol.getDeclarations()?.[0]?.parent;
   if (parent !== undefined && ts.isModuleBlock(parent)) {
     const parentSymbol = checker.getSymbolAtLocation(parent.parent.name);
@@ -464,8 +562,8 @@ function buildQualifiedName(symbol: import("typescript").Symbol, checker: import
 
 /** Get the source location of a symbol. */
 function getSymbolLocation(
-  symbol: import("typescript").Symbol,
-  sourceFile: import("typescript").SourceFile,
+  symbol: tsTypes.Symbol,
+  sourceFile: tsTypes.SourceFile,
 ): { line: number; column: number } {
   const declarations = symbol.getDeclarations();
   if (declarations !== undefined && declarations.length > 0) {
@@ -477,7 +575,11 @@ function getSymbolLocation(
 }
 
 /** Extract documentation from a symbol's JSDoc comments. */
-function extractDocumentation(symbol: import("typescript").Symbol, checker: import("typescript").TypeChecker, ts: TS): ApiDocComment {
+function extractDocumentation(
+  symbol: tsTypes.Symbol,
+  checker: tsTypes.TypeChecker,
+  ts: TS,
+): ApiDocComment {
   const declarations = symbol.getDeclarations();
   if (declarations !== undefined && declarations.length > 0) {
     const sourceFile = declarations[0]!.getSourceFile();
@@ -502,7 +604,7 @@ function extractDocumentation(symbol: import("typescript").Symbol, checker: impo
 }
 
 /** Extract the leading JSDoc comment from a node's source text. */
-function getLeadingJSDocComment(node: import("typescript").Node, fullText: string, ts: TS): string | undefined {
+function getLeadingJSDocComment(node: tsTypes.Node, fullText: string, ts: TS): string | undefined {
   const nodeStart = node.getFullStart();
   const commentRanges = ts.getLeadingCommentRanges(fullText, nodeStart);
   if (commentRanges === undefined) return undefined;
@@ -516,16 +618,29 @@ function getLeadingJSDocComment(node: import("typescript").Node, fullText: strin
 }
 
 /** Extract parameters from a signature. */
-function extractParameters(signature: import("typescript").Signature, checker: import("typescript").TypeChecker, ts: TS): ApiParameter[] {
+function extractParameters(
+  signature: tsTypes.Signature,
+  checker: tsTypes.TypeChecker,
+  ts: TS,
+): ApiParameter[] {
   return signature.getParameters().map((param) => {
-    const decl2 = (param.valueDeclaration ?? param.getDeclarations()?.[0]) as import("typescript").Node | undefined;
-    const paramType: import("typescript").Type = decl2 !== undefined
-      ? checker.getTypeOfSymbolAtLocation(param, decl2)
-      : checker.getTypeAtLocation(param.valueDeclaration! as unknown as import("typescript").Node);
+    const decl2 = (param.valueDeclaration ?? param.getDeclarations()?.[0]) as
+      tsTypes.Node | undefined;
+    const paramType: tsTypes.Type =
+      decl2 !== undefined
+        ? checker.getTypeOfSymbolAtLocation(param, decl2)
+        : checker.getTypeAtLocation(param.valueDeclaration! as unknown as tsTypes.Node);
     const isOptional = (param.flags & ts.SymbolFlags.Optional) !== 0;
-    const isRest = param.valueDeclaration !== undefined && ts.isParameter(param.valueDeclaration) && !!param.valueDeclaration.dotDotDotToken;
+    const isRest =
+      param.valueDeclaration !== undefined &&
+      ts.isParameter(param.valueDeclaration) &&
+      !!param.valueDeclaration.dotDotDotToken;
     let defaultValue: string | undefined;
-    if (param.valueDeclaration !== undefined && ts.isParameter(param.valueDeclaration) && param.valueDeclaration.initializer !== undefined) {
+    if (
+      param.valueDeclaration !== undefined &&
+      ts.isParameter(param.valueDeclaration) &&
+      param.valueDeclaration.initializer !== undefined
+    ) {
       defaultValue = param.valueDeclaration.initializer.getText();
     }
     const jsDocTags = param.getJsDocTags(checker);
@@ -546,7 +661,10 @@ function extractParameters(signature: import("typescript").Signature, checker: i
 }
 
 /** Extract type parameters from a signature. */
-function extractTypeParameters(signature: import("typescript").Signature, _ts: TS): ApiTypeParameter[] | undefined {
+function extractTypeParameters(
+  signature: tsTypes.Signature,
+  _ts: TS,
+): ApiTypeParameter[] | undefined {
   const typeParams = signature.getTypeParameters();
   if (typeParams === undefined || typeParams.length === 0) return undefined;
   return typeParams.map((tp) => {
@@ -554,16 +672,29 @@ function extractTypeParameters(signature: import("typescript").Signature, _ts: T
     const d = tp.getDefault();
     return {
       name: tp.symbol.getName(),
-      constraint: c !== undefined ? String((c as unknown as { getText?: () => string }).getText?.() ?? c) : undefined,
-      default: d !== undefined ? String((d as unknown as { getText?: () => string }).getText?.() ?? d) : undefined,
+      constraint:
+        c !== undefined
+          ? String((c as unknown as { getText?: () => string }).getText?.() ?? c)
+          : undefined,
+      default:
+        d !== undefined
+          ? String((d as unknown as { getText?: () => string }).getText?.() ?? d)
+          : undefined,
     };
   });
 }
 
 /** Extract type parameters from a class/interface/type-alias declaration. */
-function extractTypeParametersFromClass(node: import("typescript").Node, ts: TS): ApiTypeParameter[] | undefined {
-  let typeParams: readonly import("typescript").TypeParameterDeclaration[] | undefined;
-  if (ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) {
+function extractTypeParametersFromClass(
+  node: tsTypes.Node,
+  ts: TS,
+): ApiTypeParameter[] | undefined {
+  let typeParams: readonly tsTypes.TypeParameterDeclaration[] | undefined;
+  if (
+    ts.isClassDeclaration(node) ||
+    ts.isInterfaceDeclaration(node) ||
+    ts.isTypeAliasDeclaration(node)
+  ) {
     typeParams = node.typeParameters;
   }
   if (typeParams === undefined || typeParams.length === 0) return undefined;
@@ -576,15 +707,15 @@ function extractTypeParametersFromClass(node: import("typescript").Node, ts: TS)
 
 /** Extract overloaded call signatures from a symbol. */
 function extractOverloads(
-  symbol: import("typescript").Symbol,
+  symbol: tsTypes.Symbol,
   ts: TS,
-  checker: import("typescript").TypeChecker,
-  _sourceFile: import("typescript").SourceFile,
+  checker: tsTypes.TypeChecker,
+  _sourceFile: tsTypes.SourceFile,
   filePath: string,
   _rootDir: string,
   _options: SemanticAnalyzerOptions,
 ): ApiSymbol[] {
-  const decl = symbol.getDeclarations()?.[0] as import("typescript").Node | undefined;
+  const decl = symbol.getDeclarations()?.[0] as tsTypes.Node | undefined;
   if (decl === undefined) return [];
   const type = checker.getTypeOfSymbolAtLocation(symbol, decl);
   const signatures = type.getCallSignatures();
@@ -601,7 +732,16 @@ function extractOverloads(
       parameters,
       returnType,
       typeParameters: typeParams,
-      documentation: { summary: "", params: [], examples: [], throws: [], see: [], links: [], tags: {}, raw: "" },
+      documentation: {
+        summary: "",
+        params: [],
+        examples: [],
+        throws: [],
+        see: [],
+        links: [],
+        tags: {},
+        raw: "",
+      },
       sourceFile: filePath,
       line: 1,
       column: 1,
@@ -614,10 +754,10 @@ function extractOverloads(
 
 /** Extract members from a class. */
 function extractClassMembers(
-  classSymbol: import("typescript").Symbol,
+  classSymbol: tsTypes.Symbol,
   ts: TS,
-  checker: import("typescript").TypeChecker,
-  _sourceFile: import("typescript").SourceFile,
+  checker: tsTypes.TypeChecker,
+  _sourceFile: tsTypes.SourceFile,
   _filePath: string,
   _rootDir: string,
   _options: SemanticAnalyzerOptions,
@@ -629,21 +769,22 @@ function extractClassMembers(
   if (!ts.isClassDeclaration(classDecl)) return members;
 
   for (const member of classDecl.members) {
-    const mn = (member as { name?: import("typescript").Node }).name;
+    const mn = (member as { name?: tsTypes.Node }).name;
     if (mn === undefined) continue;
-    const memberSymbol = checker.getSymbolAtLocation(mn as import("typescript").Node);
+    const memberSymbol = checker.getSymbolAtLocation(mn as tsTypes.Node);
     if (memberSymbol === undefined) continue;
     const memberKind = classifyMemberKind(member, ts);
     if (memberKind === undefined) continue;
 
-    const memberType = checker.getTypeOfSymbolAtLocation(memberSymbol!, member as import("typescript").Node);
+    const memberType = checker.getTypeOfSymbolAtLocation(memberSymbol!, member as tsTypes.Node);
     const memberDocs = extractDocumentation(memberSymbol, checker, ts);
 
     const modifiers = ts.canHaveModifiers(member) ? ts.getModifiers(member) : undefined;
-    const access: ApiAccess =
-      modifiers?.some((m) => m.kind === ts.SyntaxKind.PrivateKeyword) ? "private"
-      : modifiers?.some((m) => m.kind === ts.SyntaxKind.ProtectedKeyword) ? "protected"
-      : "public";
+    const access: ApiAccess = modifiers?.some((m) => m.kind === ts.SyntaxKind.PrivateKeyword)
+      ? "private"
+      : modifiers?.some((m) => m.kind === ts.SyntaxKind.ProtectedKeyword)
+        ? "protected"
+        : "public";
     const isStatic = modifiers?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword) ?? false;
     const isReadonly = modifiers?.some((m) => m.kind === ts.SyntaxKind.ReadonlyKeyword) ?? false;
 
@@ -661,7 +802,7 @@ function extractClassMembers(
     let returnType: string | undefined;
     const callSignatures = memberType.getCallSignatures();
     if (callSignatures.length > 0) {
-      const sig = callSignatures[0] as import("typescript").Signature;
+      const sig = callSignatures[0] as tsTypes.Signature;
       if (sig === undefined) continue;
       parameters = extractParameters(sig, checker, ts);
       returnType = formatType(sig.getReturnType(), checker, { maxDepth: 4 });
@@ -670,7 +811,9 @@ function extractClassMembers(
 
     let required = true;
     if (ts.isPropertyDeclaration(member) || ts.isPropertySignature(member)) {
-      required = (member as import("typescript").PropertyDeclaration).questionToken === undefined && (member as import("typescript").PropertySignature).questionToken === undefined;
+      required =
+        (member as tsTypes.PropertyDeclaration).questionToken === undefined &&
+        (member as tsTypes.PropertySignature).questionToken === undefined;
     }
 
     const pos = member.getStart(member.getSourceFile(), false);
@@ -698,7 +841,7 @@ function extractClassMembers(
 }
 
 /** Classify the kind of a class member. */
-function classifyMemberKind(member: import("typescript").ClassElement, ts: TS): ApiMember["kind"] | undefined {
+function classifyMemberKind(member: tsTypes.ClassElement, ts: TS): ApiMember["kind"] | undefined {
   if (ts.isMethodDeclaration(member) || ts.isMethodSignature(member)) return "method";
   if (ts.isConstructorDeclaration(member)) return "constructor";
   if (ts.isGetAccessorDeclaration(member)) return "getter";
@@ -709,10 +852,10 @@ function classifyMemberKind(member: import("typescript").ClassElement, ts: TS): 
 
 /** Extract members from an interface. */
 function extractInterfaceMembers(
-  ifaceSymbol: import("typescript").Symbol,
+  ifaceSymbol: tsTypes.Symbol,
   ts: TS,
-  checker: import("typescript").TypeChecker,
-  _sourceFile: import("typescript").SourceFile,
+  checker: tsTypes.TypeChecker,
+  _sourceFile: tsTypes.SourceFile,
   _filePath: string,
   _rootDir: string,
   _options: SemanticAnalyzerOptions,
@@ -724,26 +867,29 @@ function extractInterfaceMembers(
   if (!ts.isInterfaceDeclaration(ifaceDecl)) return members;
 
   for (const member of ifaceDecl.members) {
-    const mn2 = (member as { name?: import("typescript").Node }).name;
+    const mn2 = (member as { name?: tsTypes.Node }).name;
     if (mn2 === undefined) continue;
-    const memberSymbol = checker.getSymbolAtLocation(mn2 as import("typescript").Node);
+    const memberSymbol = checker.getSymbolAtLocation(mn2 as tsTypes.Node);
     if (memberSymbol === undefined) continue;
-    const memberKind = classifyMemberKind(member as unknown as import("typescript").ClassElement, ts);
+    const memberKind = classifyMemberKind(member as unknown as tsTypes.ClassElement, ts);
     if (memberKind === undefined) continue;
 
-    const memberType = checker.getTypeOfSymbolAtLocation(memberSymbol!, member as import("typescript").Node);
+    const memberType = checker.getTypeOfSymbolAtLocation(memberSymbol!, member as tsTypes.Node);
     const memberDocs = extractDocumentation(memberSymbol, checker, ts);
     const memberLocation = getSymbolLocation(memberSymbol, member.getSourceFile());
 
-    const isReadonly = ts.canHaveModifiers(member as unknown as import("typescript").HasModifiers) &&
-      ts.getModifiers(member as unknown as import("typescript").HasModifiers)?.some((m) => m.kind === ts.SyntaxKind.ReadonlyKeyword);
+    const isReadonly =
+      ts.canHaveModifiers(member as unknown as tsTypes.HasModifiers) &&
+      ts
+        .getModifiers(member as unknown as tsTypes.HasModifiers)
+        ?.some((m) => m.kind === ts.SyntaxKind.ReadonlyKeyword);
 
     let signature = formatType(memberType, checker, { maxDepth: 3 });
     let parameters: ApiParameter[] | undefined;
     let returnType: string | undefined;
     const callSignatures = memberType.getCallSignatures();
     if (callSignatures.length > 0) {
-      const sig = callSignatures[0] as import("typescript").Signature;
+      const sig = callSignatures[0] as tsTypes.Signature;
       if (sig === undefined) continue;
       parameters = extractParameters(sig, checker, ts);
       returnType = formatType(sig.getReturnType(), checker, { maxDepth: 4 });
@@ -752,7 +898,7 @@ function extractInterfaceMembers(
 
     let required = true;
     if (ts.isPropertySignature(member)) {
-      required = (member as import("typescript").PropertySignature).questionToken === undefined;
+      required = (member as tsTypes.PropertySignature).questionToken === undefined;
     }
 
     members.push({
@@ -777,12 +923,19 @@ function extractInterfaceMembers(
 }
 
 /** Extract enum members with values. */
-function extractEnumMembers(node: import("typescript").Node, ts: TS, _checker: import("typescript").TypeChecker): ApiEnumMember[] {
+function extractEnumMembers(
+  node: tsTypes.Node,
+  ts: TS,
+  _checker: tsTypes.TypeChecker,
+): ApiEnumMember[] {
   if (!ts.isEnumDeclaration(node)) return [];
   return node.members.map((member) => {
     const name = member.name.getText();
-    const value = member.initializer !== undefined ? member.initializer.getText() : member.name.getText();
-    const location = member.getSourceFile().getLineAndCharacterOfPosition(member.getStart(member.getSourceFile(), false));
+    const value =
+      member.initializer !== undefined ? member.initializer.getText() : member.name.getText();
+    const location = member
+      .getSourceFile()
+      .getLineAndCharacterOfPosition(member.getStart(member.getSourceFile(), false));
     let description = "";
     const jsDoc = getLeadingJSDocComment(member, member.getSourceFile().getFullText(), ts);
     if (jsDoc !== undefined) {
@@ -794,7 +947,11 @@ function extractEnumMembers(node: import("typescript").Node, ts: TS, _checker: i
 }
 
 /** Format a method/function signature for display. */
-function formatSignatureDisplay(name: string, parameters: ApiParameter[], returnType: string): string {
+function formatSignatureDisplay(
+  name: string,
+  parameters: ApiParameter[],
+  returnType: string,
+): string {
   const params = parameters
     .map((p) => {
       const parts = [p.rest ? "..." : "", p.name];

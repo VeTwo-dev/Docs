@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createCompilerManager } from "../../../compiler/index.js";
-import type { SymbolExtractionInput } from "../../../contracts/input.js";
-import type { Symbol } from "../../../models/index.js";
+import type { SymbolExtractionInput } from "../../contracts/input.js";
+import type { Symbol } from "../../models/index.js";
 import { typescriptExtractor } from "../index.js";
 
 const ROOT = "/project";

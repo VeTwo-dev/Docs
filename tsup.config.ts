@@ -5,9 +5,7 @@ const runtimeExternals = [
   "commander",
   "ora",
   "chalk",
-  "cli-table3",
   // Config
-  "cosmiconfig",
   "zod",
   // Filesystem
   "chokidar",
@@ -23,7 +21,6 @@ const runtimeExternals = [
   "remark-breaks",
   "remark-mdx",
   "remark-smartypants",
-  "remark-toc",
   "rehype-slug",
   "rehype-stringify",
   "rehype-autolink-headings",
@@ -35,8 +32,6 @@ const runtimeExternals = [
   "reading-time",
   "github-slugger",
   "mdast-util-to-string",
-  "unist-util-visit",
-  "hast-util-to-html",
   // Syntax highlighting
   "shiki",
   "@shikijs/transformers",
@@ -52,19 +47,12 @@ const runtimeExternals = [
   "@resvg/resvg-js",
   // API docs
   "typedoc",
-  "typedoc-plugin-markdown",
   // Process execution
   "execa",
   "which-pm-runs",
-  "cross-spawn",
   "detect-package-manager",
   // Utilities
-  "deepmerge-ts",
   "defu",
-  "lru-cache",
-  "magic-string",
-  "mlly",
-  "ohash",
   "pathe",
   "pkg-types",
   // Compiler layer (native compilers, loaded lazily)
@@ -92,6 +80,7 @@ export default defineConfig([
       react: "src/react.ts",
       "cli/index": "src/cli/index.ts",
       "config/index": "src/config/index.ts",
+      "api/index": "src/api/index.ts",
       "plugins/index": "src/plugins/index.ts",
       "languages/index": "src/languages/index.ts",
       "examples/index": "src/examples/index.ts",

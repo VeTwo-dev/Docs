@@ -25,27 +25,41 @@ export interface DocumentationManifest {
   };
 }
 
-export function buildManifest(architecture: DocumentationArchitecture, ir: DocumentationIR, symbols: readonly ApiSymbol[] = []): DocumentationManifest {
+/**
+ * Builds the documentation manifest describing materialized pages and routes.
+ *
+ * @param architecture - Compiled documentation architecture.
+ * @param ir - Compiled Documentation IR.
+ * @param symbols - API symbols included in the output.
+ * @returns The documentation manifest.
+ */
+export function buildManifest(
+  architecture: DocumentationArchitecture,
+  ir: DocumentationIR,
+  symbols: readonly ApiSymbol[] = [],
+): DocumentationManifest {
   // Manifest describes MATERIALIZED pages (IR), never merely planned ones:
   // every listed page must exist on disk in every renderer root.
-  const titles = new Map(architecture.pages.map(p => [p.slug, p]));
+  const titles = new Map(architecture.pages.map((p) => [p.slug, p]));
   return {
     generatedAt: new Date().toISOString(),
-    pages: ir.pages.map(p => {
+    pages: ir.pages.map((p) => {
       const def = titles.get(p.slug);
       return { slug: p.slug, title: p.title, kinds: def !== undefined ? [...def.kinds] : [] };
     }),
-    routes: ir.pages.map(p => ({ slug: p.slug, path: `/docs/${p.slug}` })),
-    symbols: symbols.map(s => ({ name: s.name, kind: s.kind, sourceFile: s.sourceFile })),
+    routes: ir.pages.map((p) => ({ slug: p.slug, path: `/docs/${p.slug}` })),
+    symbols: symbols.map((s) => ({ name: s.name, kind: s.kind, sourceFile: s.sourceFile })),
     packages: [{ name: architecture.project.name }],
-    categories: [...new Set(architecture.sections.map(s => s.id))],
+    categories: [...new Set(architecture.sections.map((s) => s.id))],
     relationships: architecture.relationships.filter(
-      r => ir.pages.some(p => p.slug === r.from) && ir.pages.some(p => p.slug === r.to),
+      (r) => ir.pages.some((p) => p.slug === r.from) && ir.pages.some((p) => p.slug === r.to),
     ),
-    sourceMappings: Object.fromEntries(ir.pages.map(p => {
-      const def = titles.get(p.slug);
-      return [p.slug, def?.symbols[0] ?? def?.evidence[0]?.value ?? ""];
-    })),
+    sourceMappings: Object.fromEntries(
+      ir.pages.map((p) => {
+        const def = titles.get(p.slug);
+        return [p.slug, def?.symbols[0] ?? def?.evidence[0]?.value ?? ""];
+      }),
+    ),
     searchEntries: ir.pages.length + symbols.length,
   };
 }

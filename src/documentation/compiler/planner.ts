@@ -35,31 +35,157 @@ interface SectionCandidate {
 /** Candidate sections per archetype. First matching archetype wins ordering. */
 const SECTION_CANDIDATES: Readonly<Record<string, readonly SectionCandidate[]>> = {
   library: [
-    sec("introduction", "Introduction", ["overview"], () => true, "Every project needs an entry point."),
-    sec("getting-started", "Getting Started", ["guide", "tutorial", "installation", "quick-start"], () => true, "Install-and-first-success path."),
-    sec("installation", "Installation", ["installation"], () => true, "Package installation via detected manager."),
-    sec("quick-start", "Quick Start", ["quick-start", "tutorial"], (i) => (i.apis?.length ?? 0) > 0, "Minimal working example from real API."),
-    sec("concepts", "Concepts", ["concept"], (i) => (i.concepts?.length ?? 0) > 0, "Knowledge-graph concepts detected."),
-    sec("guides", "Guides", ["guide", "how-to", "recipe"], (i) => (i.apis?.length ?? 0) > 0, "Task-oriented guides over the public API."),
-    sec("configuration", "Configuration", ["configuration"], (i) => (i.signals.configKeys?.length ?? 0) > 0, "Configuration keys detected."),
-    sec("api-reference", "API Reference", ["api", "reference"], (i) => (i.apis?.length ?? 0) > 0, "Public API surface exists."),
-    sec("cli", "CLI", ["cli-command"], (i) => (i.signals.commands?.length ?? 0) > 0, "CLI commands detected."),
-    sec("examples", "Examples", ["example"], (i) => (i.signals.examples?.length ?? 0) > 0 || (i.apis?.length ?? 0) > 2, "Examples from tests/README/JSDoc."),
-    sec("architecture", "Architecture", ["architecture"], (i) => (i.concepts?.length ?? 0) > 2, "Modules and relationships."),
+    sec(
+      "introduction",
+      "Introduction",
+      ["overview"],
+      () => true,
+      "Every project needs an entry point.",
+    ),
+    sec(
+      "getting-started",
+      "Getting Started",
+      ["guide", "tutorial", "installation", "quick-start"],
+      () => true,
+      "Install-and-first-success path.",
+    ),
+    sec(
+      "installation",
+      "Installation",
+      ["installation"],
+      () => true,
+      "Package installation via detected manager.",
+    ),
+    sec(
+      "quick-start",
+      "Quick Start",
+      ["quick-start", "tutorial"],
+      (i) => (i.apis?.length ?? 0) > 0,
+      "Minimal working example from real API.",
+    ),
+    sec(
+      "concepts",
+      "Concepts",
+      ["concept"],
+      (i) => (i.concepts?.length ?? 0) > 0,
+      "Knowledge-graph concepts detected.",
+    ),
+    sec(
+      "guides",
+      "Guides",
+      ["guide", "how-to", "recipe"],
+      (i) => (i.apis?.length ?? 0) > 0,
+      "Task-oriented guides over the public API.",
+    ),
+    sec(
+      "configuration",
+      "Configuration",
+      ["configuration"],
+      (i) => (i.signals.configKeys?.length ?? 0) > 0,
+      "Configuration keys detected.",
+    ),
+    sec(
+      "api-reference",
+      "API Reference",
+      ["api", "reference"],
+      (i) => (i.apis?.length ?? 0) > 0,
+      "Public API surface exists.",
+    ),
+    sec(
+      "cli",
+      "CLI",
+      ["cli-command"],
+      (i) => (i.signals.commands?.length ?? 0) > 0,
+      "CLI commands detected.",
+    ),
+    sec(
+      "examples",
+      "Examples",
+      ["example"],
+      (i) => (i.signals.examples?.length ?? 0) > 0 || (i.apis?.length ?? 0) > 2,
+      "Examples from tests/README/JSDoc.",
+    ),
+    sec(
+      "architecture",
+      "Architecture",
+      ["architecture"],
+      (i) => (i.concepts?.length ?? 0) > 2,
+      "Modules and relationships.",
+    ),
     sec("security", "Security", ["security"], () => true, "Credentials and permissions."),
-    sec("performance", "Performance", ["performance"], () => true, "Caching and incremental behavior."),
-    sec("development", "Development", ["development", "testing", "building"], (i) => hasScripts(i), "Dev workflow from package scripts."),
-    sec("contributing", "Contributing", ["contributing"], (i) => hasScripts(i), "Contributor guide."),
-    sec("advanced", "Advanced", ["concept", "guide"], (i) => (i.concepts?.length ?? 0) > 3, "Multiple advanced concepts detected."),
-    sec("migration", "Migration", ["migration"], (i) => (i.apis ?? []).some((a) => a.deprecated === true), "Deprecated APIs indicate migration paths."),
-    sec("troubleshooting", "Troubleshooting", ["faq", "troubleshooting"], (i) => (i.apis?.length ?? 0) > 0, "Common problems and error recovery."),
-    sec("changelog", "Changelog", ["changelog", "release-notes"], (i) => hasChangelog(i), "Version history."),
+    sec(
+      "performance",
+      "Performance",
+      ["performance"],
+      () => true,
+      "Caching and incremental behavior.",
+    ),
+    sec(
+      "development",
+      "Development",
+      ["development", "testing", "building"],
+      (i) => hasScripts(i),
+      "Dev workflow from package scripts.",
+    ),
+    sec(
+      "contributing",
+      "Contributing",
+      ["contributing"],
+      (i) => hasScripts(i),
+      "Contributor guide.",
+    ),
+    sec(
+      "advanced",
+      "Advanced",
+      ["concept", "guide"],
+      (i) => (i.concepts?.length ?? 0) > 3,
+      "Multiple advanced concepts detected.",
+    ),
+    sec(
+      "migration",
+      "Migration",
+      ["migration"],
+      (i) => (i.apis ?? []).some((a) => a.deprecated === true),
+      "Deprecated APIs indicate migration paths.",
+    ),
+    sec(
+      "troubleshooting",
+      "Troubleshooting",
+      ["faq", "troubleshooting"],
+      (i) => (i.apis?.length ?? 0) > 0,
+      "Common problems and error recovery.",
+    ),
+    sec(
+      "changelog",
+      "Changelog",
+      ["changelog", "release-notes"],
+      (i) => hasChangelog(i),
+      "Version history.",
+    ),
   ],
   cli: [
     sec("introduction", "Introduction", ["overview"], () => true, "Entry point for CLI users."),
-    sec("installation", "Installation", ["guide"], () => true, "CLI tools need install instructions."),
-    sec("api-reference", "API Reference", ["api", "reference"], (i) => (i.apis?.length ?? 0) > 0, "Public API also exposed."),
-    sec("concepts", "Concepts", ["concept"], (i) => (i.concepts?.length ?? 0) > 0, "Concepts for CLI users."),
+    sec(
+      "installation",
+      "Installation",
+      ["guide"],
+      () => true,
+      "CLI tools need install instructions.",
+    ),
+    sec(
+      "api-reference",
+      "API Reference",
+      ["api", "reference"],
+      (i) => (i.apis?.length ?? 0) > 0,
+      "Public API also exposed.",
+    ),
+    sec(
+      "concepts",
+      "Concepts",
+      ["concept"],
+      (i) => (i.concepts?.length ?? 0) > 0,
+      "Concepts for CLI users.",
+    ),
     sec(
       "commands",
       "Commands",
@@ -88,7 +214,13 @@ const SECTION_CANDIDATES: Readonly<Record<string, readonly SectionCandidate[]>> 
       (i) => (i.signals.examples?.length ?? 0) > 0 || (i.signals.commands?.length ?? 0) > 0,
       "Concrete usage examples.",
     ),
-    sec("architecture", "Architecture", ["architecture"], (i) => (i.concepts?.length ?? 0) > 2, "CLI internals."),
+    sec(
+      "architecture",
+      "Architecture",
+      ["architecture"],
+      (i) => (i.concepts?.length ?? 0) > 2,
+      "CLI internals.",
+    ),
     sec(
       "troubleshooting",
       "Troubleshooting",
@@ -180,6 +312,13 @@ const SECTION_CANDIDATES: Readonly<Record<string, readonly SectionCandidate[]>> 
       (i) => i.signals.isMonorepo === true,
       "Package catalog.",
     ),
+    sec(
+      "api-reference",
+      "API Reference",
+      ["api", "reference"],
+      (i) => (i.apis?.length ?? 0) > 0,
+      "Aggregated workspace API surface.",
+    ),
     sec("architecture", "Architecture", ["architecture"], () => true, "How packages relate."),
     sec("development", "Development", ["guide"], () => true, "Local development workflows."),
     sec("publishing", "Publishing", ["guide"], () => true, "Release process."),
@@ -204,8 +343,13 @@ function s_hasServer(input: CompilerProjectInput): boolean {
 }
 
 function hasScripts(input: CompilerProjectInput): boolean {
-  // Heuristic: if any signals indicate scripts exist, or if package has common scripts
-  return (input.signals.commands?.length ?? 0) > 0 || (input.signals.configKeys?.length ?? 0) >= 0;
+  return (input.signals.scripts?.length ?? 0) > 0;
+}
+
+function releaseScripts(input: CompilerProjectInput): readonly string[] {
+  return (input.signals.scripts ?? []).filter((s) =>
+    /publish|release|version|changeset|pack/.test(s),
+  );
 }
 
 function hasChangelog(input: CompilerProjectInput): boolean {
@@ -230,10 +374,13 @@ export function planArchitecture(
   relationships: DocumentationRelationship[];
 } {
   // Collect candidates from all matched archetypes (deduped by id).
+  // "service" shares the backend information architecture (operations,
+  // setup, data model); both describe long-running servers.
   const seen = new Set<string>();
   const candidates: SectionCandidate[] = [];
   for (const archetype of classification.archetypes) {
-    for (const candidate of SECTION_CANDIDATES[archetype] ?? []) {
+    const key = archetype === "service" ? "backend" : archetype;
+    for (const candidate of SECTION_CANDIDATES[key] ?? []) {
       if (!seen.has(candidate.id)) {
         seen.add(candidate.id);
         candidates.push(candidate);
@@ -500,19 +647,46 @@ export function planArchitecture(
   // Installation.
   const installationSection = ensureSection("installation");
   if (installationSection !== undefined) {
-    addPage("installation", "installation", "Installation", ["installation", "guide"], "Install with your package manager and verify requirements.", [], [{ kind: "file", value: "package.json" }], 0.9);
+    addPage(
+      "installation",
+      "installation",
+      "Installation",
+      ["installation", "guide"],
+      "Install with your package manager and verify requirements.",
+      [],
+      [{ kind: "file", value: "package.json" }],
+      0.9,
+    );
   }
 
   // Quick start.
   const quickStartSection = ensureSection("quick-start");
   if (quickStartSection !== undefined) {
-    addPage("quick-start", "quick-start", "Quick Start", ["quick-start", "tutorial"], "Minimal working example using real project APIs.", [], [{ kind: "adapter", value: "quick-start" }], 0.85);
+    addPage(
+      "quick-start",
+      "quick-start",
+      "Quick Start",
+      ["quick-start", "tutorial"],
+      "Minimal working example using real project APIs.",
+      [],
+      [{ kind: "adapter", value: "quick-start" }],
+      0.85,
+    );
   }
 
   // Examples.
   const examplesSection = ensureSection("examples");
   if (examplesSection !== undefined) {
-    addPage("examples", "examples", "Examples", ["example"], "Curated examples from tests, README and JSDoc.", [], [{ kind: "adapter", value: "examples" }], 0.65);
+    addPage(
+      "examples",
+      "examples",
+      "Examples",
+      ["example"],
+      "Curated examples from tests, README and JSDoc.",
+      [],
+      [{ kind: "adapter", value: "examples" }],
+      0.65,
+    );
   }
 
   // Architecture: module evidence comes from real discovered concepts —
@@ -544,9 +718,7 @@ export function planArchitecture(
       ["architecture"],
       "What each directory does.",
       [],
-      moduleEvidence.length > 0
-        ? moduleEvidence
-        : [{ kind: "file", value: "src/" }],
+      moduleEvidence.length > 0 ? moduleEvidence : [{ kind: "file", value: "src/" }],
       0.55,
     );
   }
@@ -554,33 +726,186 @@ export function planArchitecture(
   // Security.
   const secSection = ensureSection("security");
   if (secSection !== undefined) {
-    addPage("security", "security", "Security", ["security"], "Credentials, permissions and secret handling.", [], [{ kind: "config", value: "env:secret" }], 0.5);
+    addPage(
+      "security",
+      "security",
+      "Security",
+      ["security"],
+      "Credentials, permissions and secret handling.",
+      [],
+      [{ kind: "config", value: "env:secret" }],
+      0.5,
+    );
   }
 
   // Performance.
   const perfSection = ensureSection("performance");
   if (perfSection !== undefined) {
-    addPage("performance", "performance", "Performance", ["performance"], "Caching, incremental builds and resource limits.", [], [{ kind: "adapter", value: "performance" }], 0.5);
+    addPage(
+      "performance",
+      "performance",
+      "Performance",
+      ["performance"],
+      "Caching, incremental builds and resource limits.",
+      [],
+      [{ kind: "adapter", value: "performance" }],
+      0.5,
+    );
   }
 
-  // Development.
+  // Development: script evidence comes from real package.json scripts.
   const devSection = ensureSection("development");
   if (devSection !== undefined) {
-    addPage("development", "development", "Development", ["development"], "Local setup, scripts and workflows.", [], [{ kind: "file", value: "package.json#scripts" }], 0.6);
-    addPage("development", "development/testing", "Testing", ["testing"], "How to run tests.", [], [{ kind: "file", value: "vitest.config" }], 0.55);
-    addPage("development", "development/building", "Building", ["building"], "How to build and where output goes.", [], [{ kind: "file", value: "build" }], 0.55);
+    const scripts = input.signals.scripts ?? [];
+    const scriptEvidence = (filter: RegExp): PageEvidence[] =>
+      scripts.filter((s) => filter.test(s)).map((s) => ({ kind: "script" as const, value: s }));
+    const testScripts = scriptEvidence(/test|vitest|jest|playwright|cypress/i);
+    const buildScripts = scriptEvidence(/build|compile|tsup|vite|webpack|rollup|esbuild/i);
+    if (scripts.length > 0) {
+      addPage(
+        "development",
+        "development",
+        "Development",
+        ["development"],
+        "Local setup, scripts and workflows.",
+        [],
+        scripts.map((s) => ({ kind: "script" as const, value: s })),
+        0.6,
+      );
+    }
+    if (testScripts.length > 0) {
+      addPage(
+        "development",
+        "development/testing",
+        "Testing",
+        ["testing"],
+        "How to run tests.",
+        [],
+        testScripts,
+        0.55,
+      );
+    }
+    if (buildScripts.length > 0) {
+      addPage(
+        "development",
+        "development/building",
+        "Building",
+        ["building"],
+        "How to build and where output goes.",
+        [],
+        buildScripts,
+        0.55,
+      );
+    }
+  }
+
+  // Publishing: only when release scripts actually exist.
+  const publishingSection = ensureSection("publishing");
+  if (publishingSection !== undefined) {
+    const rel = releaseScripts(input);
+    if (rel.length > 0) {
+      addPage(
+        "publishing",
+        "publishing",
+        "Publishing",
+        ["publishing"],
+        "Release process.",
+        [],
+        rel.map((s) => ({ kind: "script" as const, value: s })),
+        0.55,
+      );
+    }
+  }
+
+  // Packages (monorepo catalog): only with discovered workspace packages.
+  const packagesSection = ensureSection("packages");
+  if (packagesSection !== undefined) {
+    const pkgs = input.signals.packages ?? [];
+    if (pkgs.length > 0) {
+      addPage(
+        "packages",
+        "packages",
+        "Packages",
+        ["reference"],
+        "Workspace packages.",
+        [],
+        pkgs.map((p) => ({ kind: "package" as const, value: p })),
+        0.7,
+      );
+    }
+  }
+
+  // Operations: production environment from real env evidence.
+  const operationsSection = ensureSection("operations");
+  if (operationsSection !== undefined) {
+    const envEvidence = (input.signals.configKeys ?? [])
+      .filter((k) => k.startsWith("env:"))
+      .map((k) => ({ kind: "config" as const, value: k }));
+    if (envEvidence.length > 0) {
+      addPage(
+        "operations",
+        "operations",
+        "Operations",
+        ["guide"],
+        "Running in production.",
+        [],
+        envEvidence,
+        0.6,
+      );
+    }
+  }
+
+  // Plugins: only with real plugin evidence.
+  const pluginsSection = ensureSection("plugins");
+  if (pluginsSection !== undefined) {
+    const pluginEvidence: PageEvidence[] = [
+      ...(input.signals.plugins ?? []).map((p) => ({ kind: "dependency" as const, value: p })),
+      ...(input.concepts ?? [])
+        .filter((c) => c.kind === "plugin")
+        .map((c) => ({ kind: "graph" as const, value: c.name })),
+    ];
+    if (pluginEvidence.length > 0) {
+      addPage(
+        "plugins",
+        "plugins",
+        "Plugins",
+        ["plugin"],
+        "Plugin system.",
+        [],
+        pluginEvidence,
+        0.65,
+      );
+    }
   }
 
   // Contributing.
   const contribSection = ensureSection("contributing");
   if (contribSection !== undefined) {
-    addPage("contributing", "contributing", "Contributing", ["contributing"], "How to contribute, code style and PRs.", [], [{ kind: "file", value: "CONTRIBUTING.md" }], 0.5);
+    addPage(
+      "contributing",
+      "contributing",
+      "Contributing",
+      ["contributing"],
+      "How to contribute, code style and PRs.",
+      [],
+      [{ kind: "file", value: "CONTRIBUTING.md" }],
+      0.5,
+    );
   }
 
   // Changelog.
   const changelogSection = ensureSection("changelog");
   if (changelogSection !== undefined) {
-    addPage("changelog", "changelog", "Changelog", ["changelog", "release-notes"], "Version history and migration notes.", [], [{ kind: "file", value: "CHANGELOG.md" }], 0.45);
+    addPage(
+      "changelog",
+      "changelog",
+      "Changelog",
+      ["changelog", "release-notes"],
+      "Version history and migration notes.",
+      [],
+      [{ kind: "file", value: "CHANGELOG.md" }],
+      0.45,
+    );
   }
 
   // Troubleshooting/FAQ.
@@ -596,7 +921,16 @@ export function planArchitecture(
       [{ kind: "adapter", value: "failure-modes" }],
       0.5,
     );
-    addPage("troubleshooting", "troubleshooting/faq", "FAQ", ["faq"], "Frequently asked questions.", [], [{ kind: "adapter", value: "faq" }], 0.45);
+    addPage(
+      "troubleshooting",
+      "troubleshooting/faq",
+      "FAQ",
+      ["faq"],
+      "Frequently asked questions.",
+      [],
+      [{ kind: "adapter", value: "faq" }],
+      0.45,
+    );
   }
 
   // User-declared extra pages win their slot.
@@ -720,7 +1054,12 @@ interface ConceptGroup {
 
 /** Consolidate related concepts onto single pages using shared prefixes. */
 export function consolidateConcepts(
-  concepts: readonly { name: string; kind: string; relatedApis?: readonly string[]; description?: string }[],
+  concepts: readonly {
+    name: string;
+    kind: string;
+    relatedApis?: readonly string[];
+    description?: string;
+  }[],
 ): readonly ConceptGroup[] {
   const groups: ConceptGroup[] = [];
   const used = new Set<number>();
@@ -767,7 +1106,11 @@ export function consolidateConcepts(
       sharedPrefix,
       members,
       relatedApis: relatedApis.length > 0 ? relatedApis : undefined,
-      evidence: members.map((m) => ({ kind: "graph" as const, value: m.name, description: m.description })),
+      evidence: members.map((m) => ({
+        kind: "graph" as const,
+        value: m.name,
+        description: m.description,
+      })),
     });
   }
 

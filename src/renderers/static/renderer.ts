@@ -9,11 +9,21 @@
 
 import type { DocumentationIR, IRBlock } from "../../documentation/compiler/ir.js";
 import type { RenderedFile, RenderedSite, SiteRenderer, SiteRendererOptions } from "../types.js";
-import { buildOutputPlan, resolveDocumentationLink, type DocumentationOutputPlan, type PlannedPage } from "../output-plan.js";
+import {
+  buildOutputPlan,
+  resolveDocumentationLink,
+  type DocumentationOutputPlan,
+  type PlannedPage,
+} from "../output-plan.js";
 import { generateScaffold } from "../nextjs/scaffold.js";
 
 export type StaticRendererOptions = SiteRendererOptions;
 
+/**
+ * Creates the static HTML site renderer (owns the static/ output root).
+ *
+ * @returns Site renderer for the static-html target.
+ */
 export function createStaticRenderer(): SiteRenderer<StaticRendererOptions> {
   return {
     target: "static-html",
@@ -24,7 +34,11 @@ export function createStaticRenderer(): SiteRenderer<StaticRendererOptions> {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // JSDoc {@link Target} is not valid inline markup — render the target as code.
@@ -82,18 +96,27 @@ function navHtml(plan: DocumentationOutputPlan, pageSlug: string): string {
       (node) =>
         `<section><h2>${esc(node.label)}</h2><ul>${[
           ...(node.slug !== undefined
-            ? [`<li><a href="${esc(resolveDocumentationLink(plan, pageSlug, node.slug, "static") ?? "#")}">${esc(node.label)}</a></li>`]
+            ? [
+                `<li><a href="${esc(resolveDocumentationLink(plan, pageSlug, node.slug, "static") ?? "#")}">${esc(node.label)}</a></li>`,
+              ]
             : []),
-          ...((node.children ?? []).map((c) =>
+          ...(node.children ?? []).map((c) =>
             c.slug !== undefined
               ? `<li><a href="${esc(resolveDocumentationLink(plan, pageSlug, c.slug, "static") ?? "#")}">${esc(c.label)}</a></li>`
               : "",
-          )),
+          ),
         ].join("")}</ul></section>`,
     )
     .join("")}</nav>`;
 }
 
+/**
+ * Renders the Documentation IR to a self-contained static HTML website.
+ *
+ * @param ir - Compiled Documentation IR (sole content input).
+ * @param options - Site name, description and docs base path.
+ * @returns Rendered site with static-relative file paths.
+ */
 export function renderStaticSite(
   ir: DocumentationIR,
   options: StaticRendererOptions = {},
@@ -143,7 +166,12 @@ export function renderStaticSite(
   }
 
   // Shared design-system CSS (same tokens as Next.js globals.css).
-  const scaffold = generateScaffold({ siteName, description: options.description, routes: [], sidebar: [] });
+  const scaffold = generateScaffold({
+    siteName,
+    description: options.description,
+    routes: [],
+    sidebar: [],
+  });
   const css = scaffold.find((f) => f.path === "app/globals.css");
   files.push({ path: "assets/css/globals.css", contents: css?.contents ?? ":root{}\n" });
 

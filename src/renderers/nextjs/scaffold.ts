@@ -14,13 +14,27 @@
  * All generators are pure functions from options to file contents.
  */
 
-import type { RenderedFile } from "../types.js";
+import type { RenderedFile, RendererNavLink, RendererTheme } from "../types.js";
+
+/** GitHub mark used for repository links (inline SVG, no external asset). */
+export const GITHUB_ICON_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>';
+
+/** Derive a deterministic monogram logo from the site name + accent color. */
+export function monogramLogoSvg(siteName: string, accent: string): string {
+  const letter = (siteName.trim()[0] ?? "D").toUpperCase();
+  const safe = letter.replace(/[<>&"']/g, "");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="32" height="32" role="img" aria-label="${siteName} logo"><rect width="64" height="64" rx="14" fill="${accent}"/><text x="32" y="43" font-family="system-ui, sans-serif" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">${safe}</text></svg>`;
+}
 
 /** Data needed to generate the scaffold. */
 export interface ScaffoldInput {
   readonly siteName: string;
   readonly description?: string;
   readonly baseUrl?: string;
+  readonly theme?: RendererTheme;
+  readonly navLinks?: readonly RendererNavLink[];
+  readonly logoSvg?: string;
   /** Ordered routes from the manifest. */
   readonly routes: readonly {
     readonly slug: string;
@@ -37,6 +51,8 @@ export interface ScaffoldInput {
 
 /** Generate all static scaffold files for the Next.js runtime. */
 export function generateScaffold(input: ScaffoldInput): readonly RenderedFile[] {
+  const accent = input.theme?.colors?.accent ?? input.theme?.colors?.primary ?? "#2563eb";
+  const logo = input.logoSvg ?? monogramLogoSvg(input.siteName, accent);
   return [
     { path: "package.json", contents: packageJson() },
     { path: "next.config.mjs", contents: nextConfig() },
@@ -48,7 +64,9 @@ export function generateScaffold(input: ScaffoldInput): readonly RenderedFile[] 
     { path: "lib/pages.generated.ts", contents: pagesModule(input) },
     { path: "lib/sidebar.generated.ts", contents: sidebarModule(input) },
     { path: "lib/docs-data.ts", contents: docsDataModule(input) },
-    { path: "app/globals.css", contents: globalsCss() },
+    { path: "app/globals.css", contents: globalsCss(input.theme) },
+    { path: "public/logo.svg", contents: `${logo}\n` },
+    { path: "public/favicon.svg", contents: `${logo}\n` },
     { path: ".gitignore", contents: gitignore() },
     { path: "README.md", contents: readme(input) },
   ];
@@ -135,6 +153,21 @@ function tsconfig(): string {
 
 // ─── App Router sources ──────────────────────────────────────────────────
 
+/** Header navigation links with a GitHub mark for repository links. */
+function headerNavLinks(input: ScaffoldInput): string {
+  const links = input.navLinks ?? [];
+  if (links.length === 0) return "";
+  const items = links
+    .map((link) => {
+      const icon = link.href.includes("github.com")
+        ? `<span className="vetwo-header-icon">${GITHUB_ICON_SVG}</span>`
+        : "";
+      return `              <a className="vetwo-header-link" href=${JSON.stringify(link.href)} target="_blank" rel="noreferrer">${icon}{${JSON.stringify(link.label)}}</a>`;
+    })
+    .join("\n");
+  return `\n            <nav className="vetwo-header-nav" aria-label="External">\n${items}\n            </nav>`;
+}
+
 function rootLayout(input: ScaffoldInput): string {
   return `import type { Metadata } from "next";
 import { docsData } from "../lib/docs-data";
@@ -142,7 +175,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: ${JSON.stringify(input.siteName)},
-  description: ${JSON.stringify(input.description ?? "Documentation")},${
+  description: ${JSON.stringify(input.description ?? "Documentation")},
+  icons: { icon: "/favicon.svg" },${
     input.baseUrl !== undefined
       ? `
   metadataBase: new URL(${JSON.stringify(input.baseUrl)}),`
@@ -158,6 +192,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <header className="vetwo-header">
+          <a className="vetwo-brand" href="/">
+            <img className="vetwo-logo" src="/logo.svg" alt="" width="28" height="28" />
+            <span>{docsData.siteName}</span>
+          </a>${headerNavLinks(input)}
+        </header>
         <div className="vetwo-layout">
           <aside className="vetwo-sidebar">
             <h1>{docsData.siteName}</h1>
@@ -771,15 +811,26 @@ export type GeneratedPageData = {
 // ─── Styling & meta ──────────────────────────────────────────────────────
 
 /** Generic CSS-variable theme. No framework classes. */
-function globalsCss(): string {
+function globalsCss(theme?: RendererTheme): string {
+  const colors = theme?.colors ?? {};
+  const fonts = theme?.fonts ?? {};
+  const bodyFont = fonts.body ?? 'system-ui, -apple-system, "Segoe UI", sans-serif';
+  const headingFont = fonts.heading ?? bodyFont;
+  const codeFont = fonts.code ?? "ui-monospace, SFMono-Regular, Menlo, monospace";
   return `:root {
-  --vetwo-bg: #ffffff;
-  --vetwo-fg: #111827;
-  --vetwo-muted: #6b7280;
+  --vetwo-bg: ${colors.background ?? "#ffffff"};
+  --vetwo-fg: ${colors.text ?? "#111827"};
+  --vetwo-muted: ${colors.muted ?? "#6b7280"};
   --vetwo-border: #e5e7eb;
-  --vetwo-accent: #2563eb;
-  --vetwo-sidebar-bg: #f9fafb;
+  --vetwo-accent: ${colors.accent ?? colors.primary ?? "#2563eb"};
+  --vetwo-primary: ${colors.primary ?? "#2563eb"};
+  --vetwo-secondary: ${colors.secondary ?? "#7c3aed"};
+  --vetwo-surface: ${colors.surface ?? "#f9fafb"};
+  --vetwo-sidebar-bg: ${colors.surface ?? "#f9fafb"};
   --vetwo-code-bg: #f3f4f6;
+  --vetwo-font-body: ${bodyFont};
+  --vetwo-font-heading: ${headingFont};
+  --vetwo-font-code: ${codeFont};
   color-scheme: light dark;
 }
 
@@ -799,10 +850,51 @@ body {
   margin: 0;
   background: var(--vetwo-bg);
   color: var(--vetwo-fg);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--vetwo-font-body);
   line-height: 1.65;
   -webkit-text-size-adjust: 100%;
 }
+h1, h2, h3, h4 { font-family: var(--vetwo-font-heading); }
+code, pre, kbd { font-family: var(--vetwo-font-code); }
+
+/* ─── Site header (brand + external links) ────────────────────────────── */
+
+.vetwo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--vetwo-border);
+  background: var(--vetwo-surface);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.vetwo-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--vetwo-fg);
+  text-decoration: none;
+}
+.vetwo-logo { border-radius: 8px; display: block; }
+.vetwo-header-nav { display: flex; align-items: center; gap: 0.25rem; }
+.vetwo-header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--vetwo-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+}
+.vetwo-header-link:hover { color: var(--vetwo-accent); background: var(--vetwo-code-bg); }
+.vetwo-header-icon { display: inline-flex; }
 
 /* ─── Layout shell (shared by Next.js layout and static pages) ──────────── */
 
@@ -875,7 +967,7 @@ body {
   padding: 1rem;
   overflow-x: auto;
 }
-.vetwo-blocks code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; }
+.vetwo-blocks code { font-family: var(--vetwo-font-code); font-size: 0.875em; }
 .vetwo-blocks p > code, .vetwo-blocks li > code { background: var(--vetwo-code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
 
 .vetwo-callout { border-left: 4px solid var(--vetwo-accent); background: var(--vetwo-code-bg); padding: 0.75rem 1rem; border-radius: 0 8px 8px 0; margin: 1rem 0; }
@@ -1047,6 +1139,7 @@ button:focus-visible, summary:focus-visible {
 }
 
 @media (max-width: 860px) {
+  .vetwo-header { flex-wrap: wrap; padding: 0.75rem 1rem; }
   .vetwo-layout { flex-direction: column; }
   .vetwo-sidebar {
     width: auto;

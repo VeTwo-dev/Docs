@@ -11,13 +11,14 @@ import { defineDocs } from "@vetwo/docs/config";
  */
 export default defineDocs({
   title: "@vetwo/docs — Documentation Engine",
-  description: "The easiest and most powerful documentation generator for JavaScript and TypeScript — now documenting itself.",
+  description:
+    "The easiest and most powerful documentation generator for JavaScript and TypeScript — now documenting itself.",
   source: "./src",
   output: {
     directory: "./docs",
     layout: { next: true, markdown: true, static: true },
   },
-  baseUrl: "https://vetwo.github.io/docs/",
+  baseUrl: "https://vetwo.github.io/Docs/",
   theme: {
     name: "default",
     colors: { primary: "#2563eb", accent: "#7c3aed" },
@@ -29,7 +30,12 @@ export default defineDocs({
     exclude: ["**/*.test.*", "**/*.spec.*", "**/*.d.ts", "**/__tests__/**"],
     readme: true,
   },
-  search: { enabled: true, engine: "minisearch", indexFields: ["title", "content", "category"], maxResults: 20 },
+  search: {
+    enabled: true,
+    engine: "minisearch",
+    indexFields: ["title", "content", "category"],
+    maxResults: 20,
+  },
   sitemap: true,
   robots: true,
   og: true,

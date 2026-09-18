@@ -13,7 +13,7 @@
  */
 
 import { join, resolve, dirname, sep } from "node:path";
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import type { DocsConfig } from "../config/types.js";
 import type { Logger } from "../types/internal.js";
 import { resolveOutputLayout } from "../config/resolve.js";
@@ -26,11 +26,15 @@ import { renderMarkdownSite } from "../renderers/markdown/renderer.js";
 import { renderStaticSite } from "../renderers/static/renderer.js";
 import { buildOutputPlan } from "../renderers/output-plan.js";
 import { discoverImageSources } from "../renderers/assets.js";
-import { buildProjectKnowledge, knowledgeToCompilerInput } from "../intelligence/build-knowledge.js";
+import {
+  buildProjectKnowledge,
+  knowledgeToCompilerInput,
+} from "../intelligence/build-knowledge.js";
 import { discoverEnvVars } from "../intelligence/discovery/env.js";
 import { classifyDependencies } from "../intelligence/discovery/dependencies.js";
 import { detectFramework } from "../intelligence/discovery/framework.js";
 import { discoverExamples } from "../intelligence/discovery/examples.js";
+import { discoverCliCommands } from "../intelligence/discovery/cli.js";
 import { DocsError } from "../errors/classes.js";
 import { ErrorCode } from "../errors/codes.js";
 import type { DocumentationIR } from "../documentation/compiler/ir.js";
@@ -48,6 +52,58 @@ export interface MaterializeResult {
 export interface ValidationIssue {
   readonly severity: "error" | "warning";
   readonly message: string;
+}
+
+/**
+ * Discover workspace member packages from package.json workspaces patterns.
+ * Expands simple `<dir>/*` globs by reading member package.json names.
+ * Bounded and best-effort: unknown patterns resolve to no packages (the
+ * packages page is evidence-gated and simply won't be planned).
+ */
+export function discoverWorkspacePackages(rootDir: string): string[] {
+  try {
+    const pkg = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8")) as {
+      workspaces?: string[] | { packages?: string[] };
+      name?: string;
+    };
+    const patterns = Array.isArray(pkg.workspaces)
+      ? pkg.workspaces
+      : (pkg.workspaces?.packages ?? []);
+    const names: string[] = [];
+    for (const pattern of patterns) {
+      const star = pattern.indexOf("*");
+      if (star < 0) {
+        names.push(pattern);
+        continue;
+      }
+      const baseDir = resolve(rootDir, pattern.slice(0, star));
+      let entries: string[] = [];
+      try {
+        entries = readdirSync(baseDir).filter((e) => {
+          try {
+            return statSync(join(baseDir, e)).isDirectory();
+          } catch {
+            return false;
+          }
+        });
+      } catch {
+        continue;
+      }
+      for (const entry of entries.slice(0, 20)) {
+        try {
+          const member = JSON.parse(readFileSync(join(baseDir, entry, "package.json"), "utf8")) as {
+            name?: string;
+          };
+          names.push(member.name ?? `${pattern.replace("*", entry)}`);
+        } catch {
+          names.push(`${pattern.replace("*", entry)}`);
+        }
+      }
+    }
+    return [...new Set(names)].slice(0, 30);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -75,9 +131,10 @@ export function composeExamples(
         language: example.language || "ts",
         source: `JSDoc @example of \`${sym.qualifiedName}\``,
         owner: sym.name,
-        purpose: sym.documentation.summary.length > 0 && sym.documentation.summary.length <= 200
-          ? sym.documentation.summary
-          : undefined,
+        purpose:
+          sym.documentation.summary.length > 0 && sym.documentation.summary.length <= 200
+            ? sym.documentation.summary
+            : undefined,
       });
       if (out.length >= 6) break;
     }
@@ -88,7 +145,7 @@ export function composeExamples(
     for (const file of files) {
       if (out.length >= 8) break;
       if (!/\.(ts|js|tsx|jsx|mts|mjs)$/.test(file.path)) continue;
-      let text = "";
+      let text: string;
       try {
         const full = file.path.startsWith("/") ? file.path : join(rootDir, file.path);
         const resolved = resolve(full);
@@ -99,7 +156,11 @@ export function composeExamples(
       }
       const code = text.split("\n").slice(0, 60).join("\n").slice(0, 4000).trim();
       if (code.length < 20) continue;
-      const language = file.path.endsWith("x") ? "tsx" : file.path.endsWith(".ts") || file.path.endsWith(".mts") ? "ts" : "js";
+      const language = file.path.endsWith("x")
+        ? "tsx"
+        : file.path.endsWith(".ts") || file.path.endsWith(".mts")
+          ? "ts"
+          : "js";
       out.push({
         id: `file:${file.path}`,
         title: file.title,
@@ -120,7 +181,10 @@ export function assertRendererBoundary(site: RenderedSite, outputRoot: string): 
   for (const file of site.files) {
     const target = resolve(join(root, file.path));
     if (target !== root && !target.startsWith(root + sep)) {
-      issues.push({ severity: "error", message: `${site.target}: file escapes output root: ${file.path}` });
+      issues.push({
+        severity: "error",
+        message: `${site.target}: file escapes output root: ${file.path}`,
+      });
     }
   }
   return issues;
@@ -137,7 +201,10 @@ function writeSiteFiles(
   for (const file of site.files) {
     const target = resolve(join(resolve(outputRoot), file.path));
     if (target !== resolve(outputRoot) && !target.startsWith(resolve(outputRoot) + sep)) {
-      throw new DocsError({ code: ErrorCode.BUILD_FAILED, message: `Renderer ${site.target} escaped its root: ${file.path}` });
+      throw new DocsError({
+        code: ErrorCode.BUILD_FAILED,
+        message: `Renderer ${site.target} escaped its root: ${file.path}`,
+      });
     }
     // JSON payloads (page data, manifests, search) are deterministic build
     // artifacts regenerated every run — never user-edited, always refresh.
@@ -147,7 +214,11 @@ function writeSiteFiles(
       const existing = existsSync(target) ? readFileSync(target, "utf8") : undefined;
       // Idempotent rewrite: identical bytes are not a conflict (also heals
       // files written before ownership headers existed).
-      if (existing !== undefined && existing !== file.contents && !shouldOverwrite(existing, file.contents)) {
+      if (
+        existing !== undefined &&
+        existing !== file.contents &&
+        !shouldOverwrite(existing, file.contents)
+      ) {
         warnings.push(`Preserving user-owned ${target}`);
         logger.warn(`Preserving user-owned ${target}`);
         continue;
@@ -155,7 +226,9 @@ function writeSiteFiles(
     }
     mkdirSync(dirname(target), { recursive: true });
     // Sources carry a format-appropriate generated header; JSON stays machine-readable.
-    const contents = file.path.endsWith(".json") ? file.contents : markGeneratedFor(file.path, file.contents);
+    const contents = file.path.endsWith(".json")
+      ? file.contents
+      : markGeneratedFor(file.path, file.contents);
     writeFileSync(target, contents, "utf8");
     written.push(target);
   }
@@ -178,12 +251,18 @@ export function validateMaterialization(
     }
     const layout = next.files.find((f) => f.path === "app/layout.tsx")?.contents ?? "";
     if (!layout.includes("globals.css")) {
-      issues.push({ severity: "error", message: "Next.js: app/layout.tsx does not import globals.css" });
+      issues.push({
+        severity: "error",
+        message: "Next.js: app/layout.tsx does not import globals.css",
+      });
     }
     // Every IR page must have a JSON payload.
     for (const page of ir.pages) {
       if (!paths.has(`data/pages/${encodeURIComponent(page.slug)}.json`)) {
-        issues.push({ severity: "error", message: `Next.js: missing data payload for page ${page.slug}` });
+        issues.push({
+          severity: "error",
+          message: `Next.js: missing data payload for page ${page.slug}`,
+        });
       }
     }
     // No content leak: md-owned .mdx must not live inside next/ (except content/ legacy — forbidden).
@@ -199,9 +278,16 @@ export function validateMaterialization(
       try {
         const target: string = JSON.parse(redirect);
         const ok = next.routes.some((r) => r.route === target);
-        if (!ok) issues.push({ severity: "error", message: `Next.js: home redirects to missing route ${target}` });
+        if (!ok)
+          issues.push({
+            severity: "error",
+            message: `Next.js: home redirects to missing route ${target}`,
+          });
       } catch {
-        issues.push({ severity: "warning", message: "Next.js: home redirect target not statically verifiable" });
+        issues.push({
+          severity: "warning",
+          message: "Next.js: home redirect target not statically verifiable",
+        });
       }
     }
   }
@@ -244,6 +330,14 @@ export function validateMaterialization(
   return issues;
 }
 
+/**
+ * Materializes compiled documentation to the configured workspace directory.
+ *
+ * @param rootDir - Absolute path of the analyzed project.
+ * @param config - Resolved documentation configuration (output layout).
+ * @param logger - Logger for progress, warnings and errors.
+ * @returns Paths written, manifest location, Next.js buildability and diagnostics.
+ */
 export async function materializeDocumentation(
   rootDir: string,
   config: DocsConfig,
@@ -264,18 +358,16 @@ export async function materializeDocumentation(
   // 2. ProjectKnowledge → CompilerInput (async: wires real Phase 21 API symbols)
   let compilerInput: ReturnType<typeof buildCompilerInput>;
   try {
+    const discoveredCommands = discoverCliCommands(rootDir);
+    const workspacePackages = discoverWorkspacePackages(rootDir);
     const knowledge = await buildProjectKnowledge({
       rootDir,
       signals: {
-        hasBin: true,
-        isMonorepo: false,
+        hasBin: discoveredCommands.length > 0,
+        isMonorepo: workspacePackages.length > 0,
         framework: framework ?? undefined,
         configKeys: ["title", "baseUrl", "theme", "api", "search"],
-        commands: [
-          { name: "docs build", description: "Build docs" },
-          { name: "docs dev", description: "Dev server" },
-          { name: "docs generate", description: "Generate docs" },
-        ],
+        commands: discoveredCommands,
         examples: examples.map((e) => e.title),
       },
       packageJson: {} as Record<string, unknown>,
@@ -290,6 +382,7 @@ export async function materializeDocumentation(
         configKeys: [...(base.signals.configKeys ?? []), ...envVars.map((e) => `env:${e.name}`)],
         examples: examples.map((e) => e.title),
         framework: framework ?? base.signals.framework,
+        packages: workspacePackages,
       },
     } as typeof base;
   } catch {
@@ -300,10 +393,17 @@ export async function materializeDocumentation(
   // Composed examples: validated JSDoc examples first (symbol-linked), then
   // bounded excerpts from discovered example files. Never invented.
   const composedExamples = composeExamples(compilerInput.apiSymbols ?? [], examples, rootDir);
-  const { architecture, ir, diagnostics } = compileDocumentation(compilerInput, {}, { examples: composedExamples });
+  const { architecture, ir, diagnostics } = compileDocumentation(
+    compilerInput,
+    {},
+    { examples: composedExamples },
+  );
   // Structural corruption fails the build; content gaps are warnings.
   for (const d of diagnostics) {
-    if (d.severity === "error" && (d.code === "DOC_DUPLICATE_TITLE" || d.code === "DOC_DUPLICATE_BREADCRUMB")) {
+    if (
+      d.severity === "error" &&
+      (d.code === "DOC_DUPLICATE_TITLE" || d.code === "DOC_DUPLICATE_BREADCRUMB")
+    ) {
       errors.push(`compile: ${d.message}`);
     } else if (d.severity !== "info") {
       warnings.push(`compile: ${d.message}`);
@@ -331,7 +431,11 @@ export async function materializeDocumentation(
   let staticSite: RenderedSite | undefined;
 
   if (layout.layout.next) {
-    nextSite = renderNextJsSite(ir, { siteName: config.title, description: config.description, docsBasePath: "/docs" });
+    nextSite = renderNextJsSite(ir, {
+      siteName: config.title,
+      description: config.description,
+      docsBasePath: "/docs",
+    });
     for (const issue of assertRendererBoundary(nextSite, nextDir)) {
       errors.push(issue.message);
     }
@@ -348,7 +452,11 @@ export async function materializeDocumentation(
   }
 
   if (layout.layout.markdown) {
-    mdSite = renderMarkdownSite(ir, { siteName: config.title, description: config.description, docsBasePath: "/docs" });
+    mdSite = renderMarkdownSite(ir, {
+      siteName: config.title,
+      description: config.description,
+      docsBasePath: "/docs",
+    });
     for (const issue of assertRendererBoundary(mdSite, mdDir)) {
       errors.push(issue.message);
     }
@@ -356,7 +464,11 @@ export async function materializeDocumentation(
   }
 
   if (layout.layout.static) {
-    staticSite = renderStaticSite(ir, { siteName: config.title, description: config.description, docsBasePath: "/docs" });
+    staticSite = renderStaticSite(ir, {
+      siteName: config.title,
+      description: config.description,
+      docsBasePath: "/docs",
+    });
     for (const issue of assertRendererBoundary(staticSite, staticDir)) {
       errors.push(issue.message);
     }
@@ -376,10 +488,13 @@ export async function materializeDocumentation(
   // from the PREVIOUS run for stale-output reconciliation below.
   const manifest = buildManifest(architecture, ir, []);
   const manifestPath = join(outputDir, "manifest.json");
-  let previousFiles: { next: readonly string[]; md: readonly string[]; static: readonly string[] } | undefined;
+  let previousFiles:
+    { next: readonly string[]; md: readonly string[]; static: readonly string[] } | undefined;
   if (existsSync(manifestPath)) {
     try {
-      const prev = JSON.parse(readFileSync(manifestPath, "utf8")) as { files?: { next: readonly string[]; md: readonly string[]; static: readonly string[] } };
+      const prev = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+        files?: { next: readonly string[]; md: readonly string[]; static: readonly string[] };
+      };
       previousFiles = prev.files;
     } catch {
       previousFiles = undefined;
@@ -410,7 +525,12 @@ export async function materializeDocumentation(
   writeFileSync(
     manifestPath,
     JSON.stringify(
-      { ...manifest, generatedAt: new Date().toISOString(), _generatedBy: "@vetwo/docs", files: inventory },
+      {
+        ...manifest,
+        generatedAt: new Date().toISOString(),
+        _generatedBy: "@vetwo/docs",
+        files: inventory,
+      },
       null,
       2,
     ),
@@ -430,7 +550,12 @@ export async function materializeDocumentation(
     category: p.sectionId,
   }));
   const searchContent = JSON.stringify(
-    { entries: searchEntries, generatedAt: new Date().toISOString(), engine: config.search.engine, _generatedBy: "@vetwo/docs" },
+    {
+      entries: searchEntries,
+      generatedAt: new Date().toISOString(),
+      engine: config.search.engine,
+      _generatedBy: "@vetwo/docs",
+    },
     null,
     2,
   );
@@ -450,7 +575,8 @@ export async function materializeDocumentation(
     const { rmSync } = await import("node:fs");
     const roots = { next: nextDir, md: mdDir, static: staticDir } as const;
     for (const bucket of ["next", "md", "static"] as const) {
-      if (!layout.layout[bucket === "static" ? "static" : bucket === "md" ? "markdown" : "next"]) continue;
+      if (!layout.layout[bucket === "static" ? "static" : bucket === "md" ? "markdown" : "next"])
+        continue;
       const current = new Set(inventory[bucket]);
       for (const rel of previousFiles[bucket] ?? []) {
         if (current.has(rel)) continue;
@@ -501,7 +627,7 @@ export async function materializeDocumentation(
       for (const entry of entries) {
         const full = join(dir, entry);
         const rel = base.length > 0 ? `${base}/${entry}` : entry;
-        let isDir = false;
+        let isDir: boolean;
         try {
           isDir = statSync(full).isDirectory();
         } catch {
@@ -512,7 +638,7 @@ export async function materializeDocumentation(
           continue;
         }
         if (currentSets[bucket].has(rel)) continue;
-        let content = "";
+        let content: string;
         try {
           content = readFileSync(full, "utf8");
         } catch {

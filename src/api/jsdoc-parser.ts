@@ -1,8 +1,7 @@
-// @ts-nocheck
 /**
  * JSDoc / TSDoc Comment Parser.
  *
- * Extracts structured documentation from `/** ... *​/` and `/// ... ` comments.
+ * Extracts structured documentation from JSDoc block comments and `/// ... ` comments.
  * Handles `@param`, `@returns`, `@example`, `@deprecated`, `@since`, `@throws`,
  * `@see`, `@link`, `@default`, `@beta`, `@experimental`, `@internal` tags.
  *
@@ -60,10 +59,9 @@ function groupTags(tags: CommentTag[]): Readonly<Record<string, string[]>> {
 }
 
 /** Extract `@example` blocks from tag bodies. */
-function extractExamples(
-  bodies: readonly string[],
-): ApiDocComment["examples"] {
-  const _examples: { readonly title?: string; readonly code: string; readonly language: string }[] = [];
+function extractExamples(bodies: readonly string[]): ApiDocComment["examples"] {
+  const _examples: { readonly title?: string; readonly code: string; readonly language: string }[] =
+    [];
   // _examples used
   for (const body of bodies) {
     // Handle fenced code block: @example ```ts ... ```
@@ -71,8 +69,8 @@ function extractExamples(
     if (fencedMatch !== null) {
       _examples.push({
         title: undefined,
-        language: fencedMatch[1] || "ts",
-        code: fencedMatch[2].trim(),
+        language: fencedMatch[1]! || "ts",
+        code: fencedMatch[2]!.trim(),
       });
       continue;
     }
@@ -81,8 +79,8 @@ function extractExamples(
     if (langCodeMatch !== null) {
       _examples.push({
         title: undefined,
-        language: langCodeMatch[1] || "ts",
-        code: langCodeMatch[2].trim(),
+        language: langCodeMatch[1]! || "ts",
+        code: langCodeMatch[2]!.trim(),
       });
       continue;
     }
@@ -98,7 +96,7 @@ function extractParams(bodies: readonly string[]): ApiDocComment["params"] {
   for (const body of bodies) {
     const match = body.match(/^(\w+)\s*[-–—]\s*([\s\S]*)$/);
     if (match !== null) {
-      params.push({ name: match[1], description: match[2].trim() });
+      params.push({ name: match[1]!, description: match[2]!.trim() });
     } else {
       const nameOnly = body.trim().split(/\s+/)[0];
       if (nameOnly) {
@@ -110,19 +108,17 @@ function extractParams(bodies: readonly string[]): ApiDocComment["params"] {
 }
 
 /** Extract `@throws` / `@exception` tag bodies. */
-function extractThrows(
-  bodies: readonly string[],
-): ApiDocComment["throws"] {
+function extractThrows(bodies: readonly string[]): ApiDocComment["throws"] {
   return bodies.map((body) => {
     // Handle {ErrorType} description format
     const bracesMatch = body.match(/^\{(\w+(?:\.\w+)*)\}\s*([\s\S]*)$/);
     if (bracesMatch !== null) {
-      return { type: bracesMatch[1], description: bracesMatch[2].trim() };
+      return { type: bracesMatch[1]!, description: bracesMatch[2]!.trim() };
     }
     // Handle ErrorType - description format
     const dashMatch = body.match(/^(\w+(?:\.\w+)*)\s*[-–—]\s*([\s\S]*)$/);
     if (dashMatch !== null) {
-      return { type: dashMatch[1], description: dashMatch[2].trim() };
+      return { type: dashMatch[1]!, description: dashMatch[2]!.trim() };
     }
     return { description: body.trim() };
   });
@@ -161,7 +157,7 @@ function cleanSummary(raw: string): string {
 /**
  * Parse a JSDoc/TSDoc comment string into a structured `ApiDocComment`.
  *
- * @param raw - The raw comment text (without leading `/**` or ` *​/` delimiters).
+ * @param raw - The raw comment text (without leading delimiters).
  * @returns Parsed documentation comment.
  *
  * @example
@@ -193,7 +189,8 @@ export function parseDocComment(raw: string): ApiDocComment {
     returns: grouped["returns"]?.[0] ?? grouped["return"]?.[0],
     examples: extractExamples(grouped["example"] ?? []),
     since: grouped["since"]?.[0],
-    deprecated: grouped["deprecated"]?.[0] ?? (grouped["deprecated"] !== undefined ? "" : undefined),
+    deprecated:
+      grouped["deprecated"]?.[0] ?? (grouped["deprecated"] !== undefined ? "" : undefined),
     throws: extractThrows(grouped["throws"] ?? grouped["exception"] ?? []),
     see: extractSee(grouped["see"] ?? []),
     links: extractLinks(cleaned),

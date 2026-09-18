@@ -6,7 +6,9 @@ coverage/
 .DS_Store
 *.log
 .docs-cache/
+.vetwo/
 docs-site/
 docs/
 temp/
 generated-docs/
+.opencode

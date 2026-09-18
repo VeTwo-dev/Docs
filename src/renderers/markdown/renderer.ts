@@ -13,6 +13,11 @@ import { buildOutputPlan, resolveDocumentationLink } from "../output-plan.js";
 
 export type MarkdownRendererOptions = SiteRendererOptions;
 
+/**
+ * Creates the Markdown/MDX site renderer (owns the md/ output root).
+ *
+ * @returns Site renderer for the markdown target.
+ */
 export function createMarkdownRenderer(): SiteRenderer<MarkdownRendererOptions> {
   return {
     target: "markdown",
@@ -22,6 +27,13 @@ export function createMarkdownRenderer(): SiteRenderer<MarkdownRendererOptions> 
   };
 }
 
+/**
+ * Renders the Documentation IR to Markdown/MDX files (one per planned page).
+ *
+ * @param ir - Compiled Documentation IR (sole content input).
+ * @param options - Site name, description and docs base path.
+ * @returns Rendered site with md-relative file paths.
+ */
 export function renderMarkdownSite(
   ir: DocumentationIR,
   options: MarkdownRendererOptions = {},
@@ -52,11 +64,7 @@ export function renderMarkdownSite(
     // The IR conventionally starts pages with an H1 title + summary paragraph;
     // the template already emits those, so drop the duplicates (no double H1).
     let blocks = page.blocks;
-    if (
-      blocks[0]?.kind === "heading" &&
-      blocks[0].level === 1 &&
-      blocks[0].text === page.title
-    ) {
+    if (blocks[0]?.kind === "heading" && blocks[0].level === 1 && blocks[0].text === page.title) {
       blocks = blocks.slice(1);
       if (
         page.description !== undefined &&
@@ -84,6 +92,7 @@ export function renderMarkdownSite(
       sectionId: p.sectionId,
       sectionTitle: p.sectionTitle,
     })),
-    entrypoint: plan.homeSlug !== undefined ? plan.pagesBySlug.get(plan.homeSlug)!.mdPath : "index.mdx",
+    entrypoint:
+      plan.homeSlug !== undefined ? plan.pagesBySlug.get(plan.homeSlug)!.mdPath : "index.mdx",
   };
 }

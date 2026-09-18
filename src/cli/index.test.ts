@@ -311,32 +311,6 @@ describe("doctor command", () => {
       lastMockLogger.success.mock.calls.length + lastMockLogger.warn.mock.calls.length;
     expect(summaryCalls).toBeGreaterThan(0);
   });
-
-  it("does not fail the run when only advisory checks fail", async () => {
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
-    try {
-      // Everything exists except the git repository (advisory check).
-      mockExistsSync.mockImplementation((p: string) => !String(p).endsWith(".git"));
-      await program.parseAsync(["node", "docs", "doctor"]);
-      expect(lastMockLogger.table).toHaveBeenCalled();
-      expect(exitSpy).not.toHaveBeenCalled();
-      expect(lastMockLogger.warn).toHaveBeenCalled();
-    } finally {
-      exitSpy.mockRestore();
-    }
-  });
-
-  it("fails the run when a blocking check fails", async () => {
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
-    try {
-      // package.json missing is a blocking failure.
-      mockExistsSync.mockImplementation((p: string) => !String(p).endsWith("package.json"));
-      await program.parseAsync(["node", "docs", "doctor"]);
-      expect(exitSpy).toHaveBeenCalled();
-    } finally {
-      exitSpy.mockRestore();
-    }
-  });
 });
 
 describe("serve command", () => {

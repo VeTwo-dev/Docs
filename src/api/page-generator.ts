@@ -8,7 +8,10 @@
  */
 
 import type { IRBlock, IRPage } from "../documentation/compiler/ir.js";
-import type { DocumentationArchitecture, DocumentationPageDefinition } from "../documentation/compiler/types.js";
+import type {
+  DocumentationArchitecture,
+  DocumentationPageDefinition,
+} from "../documentation/compiler/types.js";
 import type { ApiSymbol } from "./models.js";
 import type { ApiGraph } from "./graph.js";
 import { hashString } from "../utils/hash.js";
@@ -85,10 +88,11 @@ export function generateApiPages(
 
 /** Generate IR blocks for a single API page. */
 function generatePageBlocks(
-  page: DocumentationPageDefinition,
+  _page: DocumentationPageDefinition,
   symbols: readonly ApiSymbol[],
   graph: ApiGraph,
-  options: ApiPageGeneratorOptions & Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
+  options: ApiPageGeneratorOptions &
+    Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
 ): IRBlock[] {
   // Title/summary live in IR page metadata (rendered once per renderer).
   const blocks: IRBlock[] = [];
@@ -166,7 +170,8 @@ function groupByKind(symbols: readonly ApiSymbol[]): Record<string, ApiSymbol[]>
 function generateFunctionBlocks(
   sym: ApiSymbol,
   _graph: ApiGraph,
-  options: ApiPageGeneratorOptions & Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
+  options: ApiPageGeneratorOptions &
+    Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
 ): IRBlock[] {
   const blocks: IRBlock[] = [];
 
@@ -282,7 +287,8 @@ function generateFunctionBlocks(
 function generateClassBlocks(
   sym: ApiSymbol,
   _graph: ApiGraph,
-  options: ApiPageGeneratorOptions & Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
+  options: ApiPageGeneratorOptions &
+    Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
 ): IRBlock[] {
   const blocks: IRBlock[] = [];
 
@@ -408,7 +414,8 @@ function generateClassBlocks(
 function generateInterfaceBlocks(
   sym: ApiSymbol,
   _graph: ApiGraph,
-  options: ApiPageGeneratorOptions & Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
+  options: ApiPageGeneratorOptions &
+    Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
 ): IRBlock[] {
   const blocks: IRBlock[] = [];
 
@@ -501,7 +508,8 @@ function generateInterfaceBlocks(
 /** Generate blocks for a type alias. */
 function generateTypeAliasBlocks(
   sym: ApiSymbol,
-  options: ApiPageGeneratorOptions & Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
+  options: ApiPageGeneratorOptions &
+    Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
 ): IRBlock[] {
   const blocks: IRBlock[] = [];
 
@@ -550,7 +558,8 @@ function generateTypeAliasBlocks(
 /** Generate blocks for an enum. */
 function generateEnumBlocks(
   sym: ApiSymbol,
-  options: ApiPageGeneratorOptions & Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
+  options: ApiPageGeneratorOptions &
+    Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
 ): IRBlock[] {
   const blocks: IRBlock[] = [];
 
@@ -584,11 +593,7 @@ function generateEnumBlocks(
     blocks.push({
       kind: "table",
       headers: ["Member", "Value", "Description"],
-      rows: sym.enumMembers.map((m) => [
-        `\`${m.name}\``,
-        `\`${String(m.value)}\``,
-        m.description,
-      ]),
+      rows: sym.enumMembers.map((m) => [`\`${m.name}\``, `\`${String(m.value)}\``, m.description]),
     });
   }
 
@@ -599,7 +604,8 @@ function generateEnumBlocks(
 /** Generate blocks for a variable or constant. */
 function generateVariableBlocks(
   sym: ApiSymbol,
-  options: ApiPageGeneratorOptions & Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
+  options: ApiPageGeneratorOptions &
+    Required<Pick<ApiPageGeneratorOptions, "maxMembers" | "includeAnchors">>,
 ): IRBlock[] {
   const blocks: IRBlock[] = [];
 
@@ -669,8 +675,7 @@ function buildClassSignature(sym: ApiSymbol): string {
     sym.typeParameters !== undefined && sym.typeParameters.length > 0
       ? `<${sym.typeParameters.map((t) => t.name).join(", ")}>`
       : "";
-  const heritage =
-    sym.extends !== undefined ? ` extends ${sym.extends}` : "";
+  const heritage = sym.extends !== undefined ? ` extends ${sym.extends}` : "";
   const implements_ =
     sym.implements !== undefined && sym.implements.length > 0
       ? ` implements ${sym.implements.join(", ")}`

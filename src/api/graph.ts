@@ -18,13 +18,7 @@ import type { ApiSymbol } from "./models.js";
 
 /** Edge kind in the API graph. */
 export type ApiEdgeKind =
-  | "extends"
-  | "implements"
-  | "returns"
-  | "parameters"
-  | "uses"
-  | "overloads"
-  | "member-of";
+  "extends" | "implements" | "returns" | "parameters" | "uses" | "overloads" | "member-of";
 
 /** A directed edge in the API graph. */
 export interface ApiEdge {
@@ -91,7 +85,7 @@ export function buildApiGraph(symbols: readonly ApiSymbol[]): ApiGraph {
       if (target !== undefined) {
         edges.push({
           from: sym.id,
-          to: (target as import("./models.js").ApiSymbol).id,
+          to: target!.id,
           kind: "extends",
           label: sym.extends,
         });
@@ -105,7 +99,7 @@ export function buildApiGraph(symbols: readonly ApiSymbol[]): ApiGraph {
         if (target !== undefined) {
           edges.push({
             from: sym.id,
-            to: (target as import("./models.js").ApiSymbol).id,
+            to: target!.id,
             kind: "implements",
             label: iface,
           });
@@ -119,7 +113,7 @@ export function buildApiGraph(symbols: readonly ApiSymbol[]): ApiGraph {
       if (target !== undefined) {
         edges.push({
           from: sym.id,
-          to: (target as import("./models.js").ApiSymbol).id,
+          to: target!.id,
           kind: "returns",
           label: sym.returnType,
         });
@@ -133,7 +127,7 @@ export function buildApiGraph(symbols: readonly ApiSymbol[]): ApiGraph {
         if (target !== undefined) {
           edges.push({
             from: sym.id,
-            to: (target as import("./models.js").ApiSymbol).id,
+            to: target!.id,
             kind: "parameters",
             label: param.name,
           });
@@ -181,7 +175,7 @@ export function buildApiGraph(symbols: readonly ApiSymbol[]): ApiGraph {
         if (target !== undefined && target.id !== sym.id) {
           edges.push({
             from: sym.id,
-            to: (target as import("./models.js").ApiSymbol).id,
+            to: target!.id,
             kind: "uses",
             label: typeName,
           });
@@ -239,10 +233,7 @@ export function buildApiGraph(symbols: readonly ApiSymbol[]): ApiGraph {
   function related(symbolId: string, kind?: ApiEdgeKind): ApiSymbol[] {
     const outEdges = outgoing(symbolId, kind);
     const inEdges = incoming(symbolId, kind);
-    const ids = new Set([
-      ...outEdges.map((e) => e.to),
-      ...inEdges.map((e) => e.from),
-    ]);
+    const ids = new Set([...outEdges.map((e) => e.to), ...inEdges.map((e) => e.from)]);
     return [...ids].map((id) => symbolsById.get(id)).filter((s): s is ApiSymbol => s !== undefined);
   }
 

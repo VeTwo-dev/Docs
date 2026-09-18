@@ -14,11 +14,12 @@ import { promisify } from "node:util";
 import { rimraf } from "rimraf";
 import { detectProject, detectReadme, detectChangelog } from "../scanner/index.js";
 import { BUILT_IN_THEMES } from "../themes/built-in.js";
+import { summarizeDoctorChecks, doctorExitCode, type DoctorCheck } from "./doctor.js";
 import { registerAICommands } from "../ai/cli/commands.js";
 import { registerCompilerCommands } from "../documentation/compiler/cli.js";
 import { registerContentCommands } from "../content/cli.js";
 import { registerIncrementalCommands } from "../incremental/cli.js";
-import { EXIT_CODES, exitCodeForError, type ErrorCode } from "../errors/codes.js";
+import { EXIT_CODES } from "../errors/codes.js";
 
 const require = createRequire(import.meta.url);
 const execAsync = promisify(exec);
@@ -65,13 +66,6 @@ function exitWithError(message: string, exitCode?: number): never {
   const logger = createLoggerSync();
   logger.error(message);
   process.exit(exitCode ?? EXIT_CODES.general);
-}
-
-/** Exit with a DocsError, using the appropriate exit code. */
-function exitWithDocsError(code: ErrorCode, message: string): never {
-  const logger = createLoggerSync();
-  logger.error(message);
-  process.exit(exitCodeForError(code));
 }
 
 function createLoggerFromGlobal() {
@@ -271,9 +265,7 @@ program
 
       if (options.dryRun === true || options.force === true) {
         const { runContentRegeneration } = await import("../content/index.js");
-        const { buildCompilerInput } = await import(
-          "../documentation/compiler/index.js"
-        );
+        const { buildCompilerInput } = await import("../documentation/compiler/index.js");
         let components: Record<string, string> = {};
         try {
           const { config } = await resolveConfig(rootDir);
@@ -373,7 +365,7 @@ program
       const rootDir = findRootDir();
       if (!useJson) logger.info("Running diagnostics...\n");
 
-      const checks: Array<{ label: string; pass: boolean; detail: string; advisory?: boolean }> = [];
+      const checks: DoctorCheck[] = [];
 
       let nodeVersion = process.version;
       try {
@@ -453,7 +445,9 @@ program
       checks.push({
         label: "Git repository",
         pass: detection.hasGit,
-        detail: detection.hasGit ? "Detected" : "Not detected (optional — limits changelog/migration features)",
+        detail: detection.hasGit
+          ? "Detected"
+          : "Not detected (optional — limits changelog/migration features)",
         advisory: true,
       });
 
@@ -508,10 +502,7 @@ program
         // is already reported by earlier checks.
       }
 
-      const passed = checks.filter((c) => c.pass).length;
-      const failed = checks.filter((c) => !c.pass);
-      const blockingFailed = failed.filter((c) => c.advisory !== true);
-      const advisoryFailed = failed.filter((c) => c.advisory === true);
+      const summary = summarizeDoctorChecks(checks);
 
       if (useJson) {
         writeJson({
@@ -522,10 +513,10 @@ program
             ...(c.advisory === true ? { advisory: true } : {}),
           })),
           summary: {
-            passed,
-            failed: failed.length,
-            blockingFailed: blockingFailed.length,
-            total: checks.length,
+            passed: summary.passed,
+            failed: summary.failed,
+            blockingFailed: summary.blockingFailed,
+            total: summary.total,
           },
         });
       } else {
@@ -533,22 +524,26 @@ program
           ["Check", "Status", "Detail"],
           checks.map((c) => [
             c.label,
-            c.pass ? "\x1b[32m✓\x1b[0m" : c.advisory === true ? "\x1b[33m⚠\x1b[0m" : "\x1b[31m✗\x1b[0m",
+            c.pass
+              ? "\x1b[32m✓\x1b[0m"
+              : c.advisory === true
+                ? "\x1b[33m⚠\x1b[0m"
+                : "\x1b[31m✗\x1b[0m",
             c.detail,
           ]),
         );
 
-        if (failed.length === 0) {
-          logger.success(`All ${passed} checks passed`);
+        if (summary.failed === 0) {
+          logger.success(`All ${summary.passed} checks passed`);
         } else {
           logger.warn(
-            `${blockingFailed.length} blocking, ${advisoryFailed.length} advisory, ${passed} passed`,
+            `${summary.blockingFailed} blocking, ${summary.advisoryFailed} advisory, ${summary.passed} passed`,
           );
         }
       }
 
-      if (blockingFailed.length > 0) {
-        process.exit(EXIT_CODES.general);
+      if (summary.shouldFail) {
+        process.exit(doctorExitCode(summary));
       }
     } catch (error) {
       exitWithError(`Doctor failed: ${error instanceof Error ? error.message : String(error)}`);

@@ -118,7 +118,16 @@ export interface DocumentationSection {
 
 /** Source evidence backing a page definition. */
 export interface PageEvidence {
-  readonly kind: "symbol" | "file" | "config" | "command" | "graph" | "dependency" | "adapter";
+  readonly kind:
+    | "symbol"
+    | "file"
+    | "config"
+    | "command"
+    | "graph"
+    | "dependency"
+    | "adapter"
+    | "script"
+    | "package";
   readonly value: string;
   /** Evidence-carried explanation (e.g. module responsibility), never invented. */
   readonly description?: string;
@@ -275,6 +284,10 @@ export interface CompilerProjectInput {
     readonly commands?: readonly { name: string; description?: string }[];
     readonly plugins?: readonly string[];
     readonly examples?: readonly string[];
+    /** Workspace package names/paths (monorepos). */
+    readonly packages?: readonly string[];
+    /** package.json script names actually present in the project. */
+    readonly scripts?: readonly string[];
   };
   /** Public API surface (already boundary-filtered upstream if available). */
   readonly apis?: readonly {

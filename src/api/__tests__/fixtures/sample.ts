@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Sample TypeScript file for API analyzer testing.
  *
@@ -49,6 +48,9 @@ export function createUser(
   email: string,
   options?: { readonly sendWelcome?: boolean },
 ): Promise<User> {
+  if (options?.sendWelcome === true) {
+    void options;
+  }
   return Promise.resolve({ id: "1", name, email, createdAt: new Date() });
 }
 
@@ -60,6 +62,8 @@ export function createUser(
  * @returns Array of matching users
  */
 export function searchUsers(query: string, limit: number = 10): User[] {
+  void query;
+  void limit;
   return [];
 }
 
@@ -131,8 +135,7 @@ export enum HttpMethod {
 
 /** The result of an API operation. */
 export type ApiResult<T> =
-  | { readonly ok: true; readonly data: T }
-  | { readonly ok: false; readonly error: Error };
+  { readonly ok: true; readonly data: T } | { readonly ok: false; readonly error: Error };
 
 /** A map of string keys to values. */
 export type StringMap = Record<string, string>;

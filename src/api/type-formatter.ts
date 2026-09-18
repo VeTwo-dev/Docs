@@ -158,7 +158,7 @@ export function formatType(
       const props = checker.getPropertiesOfType(type);
       if (props.length > 0 && props.length <= 8) {
         const members = props.map((p) => {
-          const vd = p.valueDeclaration as import("typescript").Node | undefined;
+          const vd = p.valueDeclaration as ts.Node | undefined;
           if (vd === undefined) return `${p.name}: unknown`;
           const propType = checker.getTypeOfSymbolAtLocation(p, vd!);
           const formatted = formatType(propType, checker, { depth: depth + 1, maxDepth });
@@ -175,17 +175,24 @@ export function formatType(
     }
 
     // Index type `{ [key: string]: value }`
-    if ((objectType.flags as number) & 0x00000000) { // IndexedAccess placeholder
+    if ((objectType.flags as number) & 0x00000000) {
+      // IndexedAccess placeholder
       return checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation);
     }
 
     // Conditional type
-    if ((objectType.flags as number) & (ts.ObjectFlags as unknown as Record<string, number>)["Conditional"] as number) {
+    if (
+      (objectType.flags as number) &
+      ((ts.ObjectFlags as unknown as Record<string, number>)["Conditional"] as number)
+    ) {
       return checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation);
     }
 
     // Mapped type
-    if ((objectType.flags as number) & (ts.ObjectFlags as unknown as Record<string, number>)["Mapped"] as number) {
+    if (
+      (objectType.flags as number) &
+      ((ts.ObjectFlags as unknown as Record<string, number>)["Mapped"] as number)
+    ) {
       return checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation);
     }
 
