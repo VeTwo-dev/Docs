@@ -199,8 +199,7 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "coverage:open": "vitest run --coverage --reporter=text && open-cli coverage/index.html 2>/dev/null || echo 'Coverage report at coverage/index.html'",
-    "prepublishOnly": "npm run build",
-    "prepare": "husky"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "documentation",
