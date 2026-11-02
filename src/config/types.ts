@@ -100,6 +100,8 @@ export interface OutputLayoutConfig {
     readonly markdown: boolean;
     /** Prepare a static output workspace under `static/`. */
     readonly static: boolean;
+    /** Prepare a Fumadocs + Next.js site under `site/`. */
+    readonly site: boolean;
   };
 }
 
@@ -157,6 +159,12 @@ export interface ArchitectureConfig {
 /** Custom MDX documentation components (name → module path). */
 export type ComponentsConfig = Readonly<Record<string, string>>;
 
+/** Content pipeline configuration. */
+export interface ContentConfig {
+  /** Which content pipeline materializes documentation. */
+  readonly pipeline: "legacy" | "canonical";
+}
+
 /** The fully resolved documentation configuration. */
 export interface DocsConfig {
   readonly title: string;
@@ -195,6 +203,8 @@ export interface DocsConfig {
   readonly architecture: ArchitectureConfig;
   /** Custom MDX documentation components. */
   readonly components: ComponentsConfig;
+  /** Content pipeline selection (strangler: `legacy` vs `canonical`). */
+  readonly content: ContentConfig;
 }
 
 /** Markdown processing configuration. */
@@ -207,6 +217,8 @@ export interface MarkdownConfig {
   readonly tocDepth: number;
   readonly syntaxHighlighting: boolean;
   readonly mdx: boolean;
+  /** Source extension used when materializing generated MDX/Markdown. */
+  readonly extension: ".md" | ".mdx";
   readonly smartypants: boolean;
   readonly raw: boolean;
   readonly document: boolean;
@@ -262,4 +274,6 @@ export interface DocsConfigInput {
   readonly architecture?: Partial<ArchitectureConfig>;
   /** Custom MDX documentation components (name → module path). */
   readonly components?: ComponentsConfig;
+  /** Content pipeline configuration. */
+  readonly content?: Partial<ContentConfig>;
 }

@@ -244,9 +244,7 @@ export function registerContentCommands(
         logger.info(`${pageSlug}:`);
         for (const change of changes.slice(0, 12)) {
           const detail =
-            change.after !== undefined
-              ? `${change.subject} → ${change.after}`
-              : change.subject;
+            change.after !== undefined ? `${change.subject} → ${change.after}` : change.subject;
           logger.info(`  ${change.kind}: ${detail}`);
         }
       }

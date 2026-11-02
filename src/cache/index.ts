@@ -114,7 +114,11 @@ export function createCacheStore(rootDir: string, options?: CacheStoreOptions): 
 
   // Invalidate all entries if config fingerprint changed
   if (options?.configFingerprint && manifest.configFingerprint !== options.configFingerprint) {
-    manifest = { version: CACHE_SCHEMA_VERSION, entries: {}, configFingerprint: options.configFingerprint };
+    manifest = {
+      version: CACHE_SCHEMA_VERSION,
+      entries: {},
+      configFingerprint: options.configFingerprint,
+    };
     memoryCache.clear();
   }
 
@@ -238,7 +242,11 @@ export function createCacheStore(rootDir: string, options?: CacheStoreOptions): 
       if (existsSync(cacheDir)) {
         rmSync(cacheDir, { recursive: true });
       }
-      manifest = { version: CACHE_SCHEMA_VERSION, entries: {}, configFingerprint: options?.configFingerprint };
+      manifest = {
+        version: CACHE_SCHEMA_VERSION,
+        entries: {},
+        configFingerprint: options?.configFingerprint,
+      };
       memoryCache.clear();
     },
 
@@ -256,13 +264,21 @@ export function createCacheStore(rootDir: string, options?: CacheStoreOptions): 
             console.warn(
               `[vetwo/docs] cache manifest version mismatch (got ${raw.version}, expected ${CACHE_SCHEMA_VERSION}), rebuilding`,
             );
-            manifest = { version: CACHE_SCHEMA_VERSION, entries: {}, configFingerprint: options?.configFingerprint };
+            manifest = {
+              version: CACHE_SCHEMA_VERSION,
+              entries: {},
+              configFingerprint: options?.configFingerprint,
+            };
             return;
           }
           manifest = raw;
         } catch {
           console.warn("[vetwo/docs] cache manifest corrupted, rebuilding cache");
-          manifest = { version: CACHE_SCHEMA_VERSION, entries: {}, configFingerprint: options?.configFingerprint };
+          manifest = {
+            version: CACHE_SCHEMA_VERSION,
+            entries: {},
+            configFingerprint: options?.configFingerprint,
+          };
         }
       }
     },

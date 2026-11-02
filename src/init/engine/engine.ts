@@ -16,6 +16,7 @@ import {
   buildMarkdownReadme,
   buildStaticReadme,
   buildNextScaffold,
+  buildDesignSources,
 } from "../templates/index.js";
 import { mergeSkillContent, mergeConfigContent } from "../merge/index.js";
 import { buildInitPlan, requiresConfirmation } from "../planner/index.js";
@@ -155,6 +156,7 @@ export async function initializeDocumentationWorkspace(
   const plansReadme = buildPlansReadme();
   const markdownReadme = buildMarkdownReadme({ projectName: project.name });
   const staticReadme = buildStaticReadme();
+  const designSources = buildDesignSources();
   const nextScaffold = buildNextScaffold({ projectName: project.name });
 
   // ── Plan ───────────────────────────────────────────────────────────────
@@ -173,6 +175,7 @@ export async function initializeDocumentationWorkspace(
       plansReadme,
       markdownReadme,
       staticReadme,
+      designSources,
       nextScaffold,
     },
   });
@@ -190,6 +193,7 @@ export async function initializeDocumentationWorkspace(
 
   // ── File contents map ──────────────────────────────────────────────────
   const nextScaffoldByPath = new Map(nextScaffold.map(([file, content]) => [file, content]));
+  const designSourcesByPath = new Map(designSources.map(([file, content]) => [file, content]));
   const files = new Map<string, string>();
   for (const action of plan) {
     if (action.kind !== "file") continue;
@@ -206,6 +210,7 @@ export async function initializeDocumentationWorkspace(
       plansReadme,
       markdownReadme,
       staticReadme,
+      designSourcesByPath,
       nextScaffoldByPath,
       manifestContent,
     });
@@ -358,6 +363,7 @@ interface FileContentOptions {
   readonly plansReadme: string;
   readonly markdownReadme: string;
   readonly staticReadme: string;
+  readonly designSourcesByPath: ReadonlyMap<string, string>;
   readonly nextScaffoldByPath: ReadonlyMap<string, string>;
   readonly manifestContent: string;
 }
@@ -395,6 +401,7 @@ function fileContentFor(action: PlanAction, options: FileContentOptions): string
   if (rel === "agent/plans/README.md") return options.plansReadme;
   if (rel === `${out}/md/README.md`) return options.markdownReadme;
   if (rel === `${out}/static/README.md`) return options.staticReadme;
+  if (rel.startsWith("design/")) return options.designSourcesByPath.get(rel);
   if (rel === ".vetwo/docs/manifests/workspace.json") return options.manifestContent;
 
   if (rel.startsWith(`${out}/next/`)) {
@@ -468,6 +475,7 @@ function templateName(rel: string): string {
     return "config";
   }
   if (rel.endsWith("skill.md")) return "skill";
+  if (rel.startsWith("design/")) return `design:${rel.slice("design/".length)}`;
   if (rel.includes("/next/")) return `next:${rel.slice(rel.indexOf("/next/") + 6)}`;
   if (rel.includes("manifests/workspace.json")) return "manifest";
   return rel;

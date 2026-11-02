@@ -179,8 +179,7 @@ export function registerAICommands(
       logger.table(["Provider", "Credential", "Status"], rows);
     });
 
-  ai
-    .command("review [proposal]")
+  ai.command("review [proposal]")
     .description("Review pending AI content proposals (added/changed/removed with confidence)")
     .action((proposalPath?: string) => {
       const rootDir = findRootDir();

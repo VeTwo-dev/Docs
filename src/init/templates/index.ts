@@ -19,3 +19,4 @@ export type { NextTemplateContext, ScaffoldFile } from "./next.js";
 export { buildMarkdownReadme } from "./markdown.js";
 export type { MarkdownTemplateContext } from "./markdown.js";
 export { buildStaticReadme } from "./static.js";
+export { buildDesignSources } from "./design.js";

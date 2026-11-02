@@ -9,10 +9,7 @@ import type { ApiSymbol } from "./models.js";
 import type { ApiGraph } from "./graph.js";
 
 export type ApiDiagnosticCode =
-  | "API_UNDOCUMENTED"
-  | "API_PARAM_MISMATCH"
-  | "API_MISSING_RETURNS"
-  | "API_BROKEN_LINK";
+  "API_UNDOCUMENTED" | "API_PARAM_MISMATCH" | "API_MISSING_RETURNS" | "API_BROKEN_LINK";
 
 export interface ApiDiagnostic {
   readonly code: ApiDiagnosticCode;
@@ -54,7 +51,12 @@ export function validateApis(
     const docParamNames = new Set(s.documentation.params.map((p) => p.name));
     const realParamNames = new Set(s.parameters?.map((p) => p.name) ?? []);
     for (const rp of realParamNames) {
-      if (!docParamNames.has(rp) && s.parameters !== undefined && s.parameters.length > 0 && options.requireParamDocs !== false) {
+      if (
+        !docParamNames.has(rp) &&
+        s.parameters !== undefined &&
+        s.parameters.length > 0 &&
+        options.requireParamDocs !== false
+      ) {
         // Only warn if there is at least one documented param but this one is missing — avoids noise on fully undocumented.
         if (docParamNames.size > 0) {
           diags.push({
@@ -81,8 +83,16 @@ export function validateApis(
       }
     }
 
-    if (options.requireReturns === true && s.returnType !== undefined && s.returnType !== "void" && s.returnType !== "never") {
-      const hasReturns = (s.documentation.returns !== undefined && s.documentation.returns.length > 0) || s.documentation.tags["returns"] !== undefined || s.documentation.tags["return"] !== undefined;
+    if (
+      options.requireReturns === true &&
+      s.returnType !== undefined &&
+      s.returnType !== "void" &&
+      s.returnType !== "never"
+    ) {
+      const hasReturns =
+        (s.documentation.returns !== undefined && s.documentation.returns.length > 0) ||
+        s.documentation.tags["returns"] !== undefined ||
+        s.documentation.tags["return"] !== undefined;
       if (!hasReturns && (s.kind === "function" || s.kind === "method" || s.kind === "getter")) {
         diags.push({
           code: "API_MISSING_RETURNS",

@@ -1,0 +1,219 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VeTwo Design Tokens
+   ─────────────────────────────────────────────────────────────────────
+   The single source of truth for every visual decision. Both render
+   targets (Next.js/Fumadocs site and portable static output) consume
+   this file; generated `globals.css` artifacts concatenate it verbatim.
+
+   Token vocabulary (define new ones here; never redefine elsewhere):
+     color    --vetwo-{bg, surface, surface-2, sidebar, fg, muted,
+                     border, border-strong, accent, accent-strong,
+                     accent-dim, secondary, on-accent,
+                     tone-note, tone-tip, tone-warning, tone-danger,
+                     tone-tip-bg, tone-warning-bg,
+                     tone-danger-bg, overlay, shadow, shadow-strong}
+     code     --vetwo-{code-bg, code-panel, code-border, code-fg,
+                     tok-plain, tok-comment, tok-string, tok-keyword,
+                     tok-number, tok-fn, tok-punct}
+     type     --vetwo-font-{body, heading, code},
+              --vetwo-{size-article, leading-tight, leading-body,
+                       leading-code}
+     layout   --vetwo-{header-h, measure, sidebar-w}
+     space    --vetwo-space-{1..8}
+     radius   --vetwo-radius-{small, medium, large, pill}
+     motion   --vetwo-{ease, dur-fast, dur}
+     layer    --vetwo-z-{header, sidebar}
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Light scheme (default media state) ─────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  /* Surfaces: cool paper with faint blue-slate tint, hairline borders. */
+  --vetwo-bg: #fafbfd;
+  --vetwo-surface: #f3f5f8;
+  --vetwo-surface-2: #eceff4;
+  --vetwo-sidebar: #f6f8fb;
+  --vetwo-overlay: rgba(10, 16, 24, 0.45);
+
+  /* Ink */
+  --vetwo-fg: #101823;
+  --vetwo-muted: #5a6a7d;
+  --vetwo-border: #e4e9ef;
+  --vetwo-border-strong: #c7d2de;
+
+  /* VeTwo accent: restrained emerald. Interactive colors only. */
+  --vetwo-accent: #059669;
+  --vetwo-accent-strong: #047857;
+  --vetwo-accent-dim: rgba(5, 150, 105, 0.11);
+  --vetwo-secondary: #0d9488;
+  --vetwo-on-accent: #ffffff;
+
+  /* Status tones (callouts) */
+  --vetwo-tone-note: #5a6a7d;
+  --vetwo-tone-tip: #059669;
+  --vetwo-tone-warning: #b45309;
+  --vetwo-tone-danger: #b91c1c;
+  --vetwo-tone-tip-bg: #effcf5;
+  --vetwo-tone-warning-bg: #fff7e6;
+  --vetwo-tone-danger-bg: #fdf0f0;
+
+  /* Elevation */
+  --vetwo-shadow: 0 1px 2px rgba(12, 20, 31, 0.06);
+  --vetwo-shadow-strong:
+    0 1px 2px rgba(12, 20, 31, 0.05), 0 6px 20px rgba(12, 20, 31, 0.1);
+
+  /* Code: a dark ink panel in both schemes; inline code keeps a light chip */
+  --vetwo-code-bg: #eef2f6;
+  --vetwo-code-panel: #0e141b;
+  --vetwo-code-border: #232d3a;
+  --vetwo-code-fg: #dbe4ee;
+  --vetwo-tok-plain: #dbe4ee;
+  --vetwo-tok-comment: #71809a;
+  --vetwo-tok-string: #9fd8b4;
+  --vetwo-tok-keyword: #7fd0e8;
+  --vetwo-tok-number: #e8c08a;
+  --vetwo-tok-fn: #c6d4f7;
+  --vetwo-tok-punct: #8695a8;
+
+  /* Typography */
+  --vetwo-font-body:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+  --vetwo-font-heading:
+    "Inter Variable", "Inter", "SF Pro Display", system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --vetwo-font-code:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Roboto Mono, Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --vetwo-size-article: 1rem;
+  --vetwo-leading-tight: 1.25;
+  --vetwo-leading-body: 1.7;
+  --vetwo-leading-code: 1.65;
+
+  /* Layout */
+  --vetwo-header-h: 4.1rem;
+  --vetwo-measure: 48rem;
+  --vetwo-sidebar-w: 17.5rem;
+
+  /* Spacing scale */
+  --vetwo-space-1: 0.25rem;
+  --vetwo-space-2: 0.5rem;
+  --vetwo-space-3: 0.75rem;
+  --vetwo-space-4: 1rem;
+  --vetwo-space-5: 1.5rem;
+  --vetwo-space-6: 2rem;
+  --vetwo-space-7: 3rem;
+  --vetwo-space-8: 4rem;
+
+  /* Shape */
+  --vetwo-radius-small: 6px;
+  --vetwo-radius-medium: 10px;
+  --vetwo-radius-large: 14px;
+  --vetwo-radius-pill: 999px;
+
+  /* Motion */
+  --vetwo-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --vetwo-dur-fast: 120ms;
+  --vetwo-dur: 180ms;
+
+  /* Layers */
+  --vetwo-z-header: 20;
+  --vetwo-z-sidebar: 10;
+}
+
+/* ── Dark scheme — explicit (Fumadocs `next-themes` toggles `.dark`) ── */
+.dark {
+  color-scheme: dark;
+
+  /* Cinematic near-black with a hint of blue depth. */
+  --vetwo-bg: #070a0e;
+  --vetwo-surface: #0e1319;
+  --vetwo-surface-2: #161c24;
+  --vetwo-sidebar: #0a0e13;
+  --vetwo-overlay: rgba(2, 5, 9, 0.65);
+
+  --vetwo-fg: #e7edf4;
+  --vetwo-muted: #92a1b5;
+  --vetwo-border: #1d2733;
+  --vetwo-border-strong: #2b3849;
+
+  --vetwo-accent: #34d399;
+  --vetwo-accent-strong: #6ee7b7;
+  --vetwo-accent-dim: rgba(52, 211, 153, 0.13);
+  --vetwo-secondary: #2dd4bf;
+  --vetwo-on-accent: #06251a;
+
+  --vetwo-tone-note: #92a1b5;
+  --vetwo-tone-tip: #34d399;
+  --vetwo-tone-warning: #f0b23e;
+  --vetwo-tone-danger: #f87171;
+  --vetwo-tone-tip-bg: rgba(52, 211, 153, 0.08);
+  --vetwo-tone-warning-bg: rgba(240, 178, 62, 0.08);
+  --vetwo-tone-danger-bg: rgba(248, 113, 113, 0.08);
+
+  --vetwo-shadow: 0 1px 2px rgba(2, 5, 9, 0.55);
+  --vetwo-shadow-strong:
+    0 1px 2px rgba(2, 5, 9, 0.5), 0 8px 28px rgba(2, 5, 9, 0.6);
+
+  --vetwo-code-bg: #0e141b;
+  --vetwo-code-panel: #0d1218;
+  --vetwo-code-border: #212c39;
+  --vetwo-code-fg: #dce4ee;
+  --vetwo-tok-plain: #dce4ee;
+  --vetwo-tok-comment: #6d7d97;
+  --vetwo-tok-string: #9fd8b4;
+  --vetwo-tok-keyword: #7fd0e8;
+  --vetwo-tok-number: #e8c08a;
+  --vetwo-tok-fn: #c6d4f7;
+  --vetwo-tok-punct: #8695a8;
+}
+
+/* ── Dark scheme — OS preference (static target: no `.dark` toggling).
+       `.dark` and explicit user pinning always win. ─────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not(.dark) {
+    color-scheme: dark;
+
+    --vetwo-bg: #070a0e;
+    --vetwo-surface: #0e1319;
+    --vetwo-surface-2: #161c24;
+    --vetwo-sidebar: #0a0e13;
+    --vetwo-overlay: rgba(2, 5, 9, 0.65);
+
+    --vetwo-fg: #e7edf4;
+    --vetwo-muted: #92a1b5;
+    --vetwo-border: #1d2733;
+    --vetwo-border-strong: #2b3849;
+
+    --vetwo-accent: #34d399;
+    --vetwo-accent-strong: #6ee7b7;
+    --vetwo-accent-dim: rgba(52, 211, 153, 0.13);
+    --vetwo-secondary: #2dd4bf;
+    --vetwo-on-accent: #06251a;
+
+    --vetwo-tone-note: #92a1b5;
+    --vetwo-tone-tip: #34d399;
+    --vetwo-tone-warning: #f0b23e;
+    --vetwo-tone-danger: #f87171;
+    --vetwo-tone-tip-bg: rgba(52, 211, 153, 0.08);
+    --vetwo-tone-warning-bg: rgba(240, 178, 62, 0.08);
+    --vetwo-tone-danger-bg: rgba(248, 113, 113, 0.08);
+
+    --vetwo-shadow: 0 1px 2px rgba(2, 5, 9, 0.55);
+    --vetwo-shadow-strong:
+      0 1px 2px rgba(2, 5, 9, 0.5), 0 8px 28px rgba(2, 5, 9, 0.6);
+
+    --vetwo-code-bg: #0e141b;
+    --vetwo-code-panel: #0d1218;
+    --vetwo-code-border: #212c39;
+    --vetwo-code-fg: #dce4ee;
+    --vetwo-tok-plain: #dce4ee;
+    --vetwo-tok-comment: #6d7d97;
+    --vetwo-tok-string: #9fd8b4;
+    --vetwo-tok-keyword: #7fd0e8;
+    --vetwo-tok-number: #e8c08a;
+    --vetwo-tok-fn: #c6d4f7;
+    --vetwo-tok-punct: #8695a8;
+  }
+}

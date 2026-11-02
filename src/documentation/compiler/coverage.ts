@@ -148,17 +148,33 @@ export function computeCoverage(
   }
   // Development lifecycle (only scored when scripts exist — otherwise excluded)
   const hasDev = hasPageWithKind("development");
-  areas.push({ area: "development", documented: hasDev ? ["development"] : [], excluded: hasDev ? [] : ["development"], gaps: hasDev ? [] : [] });
+  areas.push({
+    area: "development",
+    documented: hasDev ? ["development"] : [],
+    excluded: hasDev ? [] : ["development"],
+    gaps: hasDev ? [] : [],
+  });
   const hasTesting = hasPageWithKind("testing");
-  areas.push({ area: "testing", documented: hasTesting ? ["testing"] : [], excluded: hasTesting ? [] : ["testing"], gaps: hasTesting ? [] : [] });
+  areas.push({
+    area: "testing",
+    documented: hasTesting ? ["testing"] : [],
+    excluded: hasTesting ? [] : ["testing"],
+    gaps: hasTesting ? [] : [],
+  });
   const hasBuilding = hasPageWithKind("building");
-  areas.push({ area: "building", documented: hasBuilding ? ["building"] : [], excluded: hasBuilding ? [] : ["building"], gaps: hasBuilding ? [] : [] });
+  areas.push({
+    area: "building",
+    documented: hasBuilding ? ["building"] : [],
+    excluded: hasBuilding ? [] : ["building"],
+    gaps: hasBuilding ? [] : [],
+  });
 
   // Overall score: share of in-scope items documented, project-type aware — excluded areas don't count
   let totalInScope = 0;
   let totalDocumented = 0;
   for (const area of areas) {
-    if (area.excluded.length > 0 && area.documented.length === 0 && area.gaps.length === 0) continue;
+    if (area.excluded.length > 0 && area.documented.length === 0 && area.gaps.length === 0)
+      continue;
     totalInScope += area.documented.length + area.gaps.length;
     totalDocumented += area.documented.length;
   }

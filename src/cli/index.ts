@@ -13,9 +13,12 @@ import { exec, execSync } from "node:child_process";
 import { promisify } from "node:util";
 import { rimraf } from "rimraf";
 import { detectProject, detectReadme, detectChangelog } from "../scanner/index.js";
+import { isPathWithinRoot } from "../filesystem/index.js";
+import type { DocsConfig } from "../config/types.js";
 import { BUILT_IN_THEMES } from "../themes/built-in.js";
 import { summarizeDoctorChecks, doctorExitCode, type DoctorCheck } from "./doctor.js";
 import { registerAICommands } from "../ai/cli/commands.js";
+import { registerIntegrationCommands } from "../integrations/cli.js";
 import { registerCompilerCommands } from "../documentation/compiler/cli.js";
 import { registerContentCommands } from "../content/cli.js";
 import { registerIncrementalCommands } from "../incremental/cli.js";
@@ -97,6 +100,52 @@ async function resolveConfig(rootDir: string) {
   return loadConfig(rootDir);
 }
 
+/** Shared per-command setup: logger, project root, and optional configuration. */
+interface CommandContext {
+  readonly rootDir: string;
+  readonly logger: ReturnType<typeof createLoggerSync>;
+}
+
+async function commandContext(options?: { config?: false }): Promise<CommandContext>;
+async function commandContext(options: {
+  config: true;
+}): Promise<CommandContext & { config: DocsConfig }>;
+async function commandContext(
+  options: { config?: boolean } = {},
+): Promise<CommandContext & { config?: DocsConfig }> {
+  const logger = createLoggerFromGlobal();
+  const rootDir = findRootDir();
+  if (options.config === true) {
+    const { config } = await resolveConfig(rootDir);
+    return { rootDir, logger, config };
+  }
+  return { rootDir, logger };
+}
+
+/**
+ * Parse a `--port` flag value. Exits with an actionable error for
+ * non-numeric or out-of-range input instead of failing deep inside
+ * `server.listen` with an obscure message.
+ */
+function parsePortNumber(raw: string, command: string): number {
+  const port = Number.parseInt(raw, 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    exitWithError(
+      `Invalid --port "${raw}" for ${command}: expected an integer between 1 and 65535.`,
+    );
+  }
+  return port;
+}
+
+// npm package-name shape (scope optional). Anything else is rejected before
+// the name reaches a shell command: several commands interpolate package
+// names into `execSync` strings, so validation here is the injection boundary.
+const PACKAGE_NAME_RE = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+
+function isSafePackageName(name: string): boolean {
+  return name.length > 0 && name.length <= 214 && PACKAGE_NAME_RE.test(name);
+}
+
 const program = new Command();
 
 program
@@ -132,9 +181,8 @@ program
   .option("--non-interactive", "Fail instead of prompting when conflicts require confirmation")
   .option("-o, --output <directory>", "Documentation output directory (e.g. wiki)")
   .action(async (options) => {
-    const logger = createLoggerFromGlobal();
     try {
-      const rootDir = findRootDir();
+      const { rootDir, logger } = await commandContext();
       const { initializeDocumentationWorkspace } = await import("../init/index.js");
       await initializeDocumentationWorkspace({
         rootDir,
@@ -157,16 +205,17 @@ program
   .option("--open", "Open browser automatically")
   .action(async (options) => {
     try {
-      const rootDir = findRootDir();
+      const port = parsePortNumber(options.port, "dev");
+      const { rootDir, config } = await commandContext({ config: true });
       const { startDevServer } = await import("../dev-server/index.js");
-      const { config } = await resolveConfig(rootDir);
 
       await startDevServer(rootDir, {
-        port: parseInt(options.port, 10),
+        port,
         host: options.host,
         open: options.open ?? false,
         sourceDir: config.source,
         extraWatch: [],
+        outputDir: resolve(rootDir, resolveOutputDirectory(config)),
       });
     } catch (error) {
       exitWithError(`Dev server failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -177,15 +226,13 @@ program
   .command("watch")
   .description("Watch for file changes and rebuild")
   .action(async () => {
-    const logger = createLoggerFromGlobal();
     try {
-      const rootDir = findRootDir();
+      const { rootDir, logger, config } = await commandContext({ config: true });
       logger.info("Starting watch mode...");
 
       const chokidar = await import("chokidar");
-      const { config } = await resolveConfig(rootDir);
-
-      const watcher = chokidar.default.watch(config.source, {
+      const watchRoot = resolve(rootDir, config.source);
+      const watcher = chokidar.default.watch(watchRoot, {
         ignoreInitial: true,
         ignored: [/(^|[/\\])\../, /node_modules/],
       });
@@ -225,10 +272,9 @@ program
   .option("-c, --config <path>", "Path to config file")
   .option("--json", "Output build results as JSON")
   .action(async (options) => {
-    const logger = createLoggerFromGlobal();
+    const { rootDir, logger } = await commandContext();
     const useJson = options.json ?? globalOptions.json;
     try {
-      const rootDir = findRootDir();
       const configPath = options.config
         ? resolve(rootDir, options.config)
         : globalOptions.config
@@ -259,9 +305,8 @@ program
   .option("--dry-run", "Plan safe content regeneration without writing files")
   .option("--force", "Update manually-edited generated pages (never protected ones)")
   .action(async (options) => {
-    const logger = createLoggerFromGlobal();
     try {
-      const rootDir = findRootDir();
+      const { rootDir, logger } = await commandContext();
 
       if (options.dryRun === true || options.force === true) {
         const { runContentRegeneration } = await import("../content/index.js");
@@ -310,11 +355,15 @@ program
   .option("--state", "Clean safe regenerable internal state (indexes, graphs)")
   .option("--dry-run", "Show what would be removed without deleting anything")
   .action(async (options) => {
-    const logger = createLoggerFromGlobal();
     try {
-      const rootDir = findRootDir();
-      const { config } = await resolveConfig(rootDir);
-      const outputDir = resolveOutputDirectory(config);
+      const { rootDir, logger, config } = await commandContext({ config: true });
+      const outputDir = resolve(rootDir, resolveOutputDirectory(config));
+      // Destructive operation: never remove anything outside the project.
+      if (!isPathWithinRoot(rootDir, outputDir)) {
+        exitWithError(
+          `Refusing to clean outside the project root: ${outputDir} (project root: ${rootDir}). Check the "output" setting.`,
+        );
+      }
 
       if (existsSync(outputDir)) {
         if (options.dryRun) {
@@ -359,10 +408,9 @@ program
   .description("Run diagnostics on your documentation setup")
   .option("--json", "Output results as JSON")
   .action(async (options: { json?: boolean }) => {
-    const logger = createLoggerFromGlobal();
+    const { rootDir, logger } = await commandContext();
     const useJson = options.json ?? globalOptions.json;
     try {
-      const rootDir = findRootDir();
       if (!useJson) logger.info("Running diagnostics...\n");
 
       const checks: DoctorCheck[] = [];
@@ -557,7 +605,9 @@ program
   .option("--host <string>", "Host to bind to", "localhost")
   .action(async (dir: string | undefined, options: { port: string; host: string }) => {
     try {
-      const rootDir = findRootDir();
+      const port = parsePortNumber(options.port, "serve");
+      const host = options.host;
+      const { rootDir, logger } = await commandContext();
       let serveDir: string;
 
       if (dir) {
@@ -570,11 +620,6 @@ program
       if (!existsSync(serveDir)) {
         exitWithError(`Directory does not exist: ${serveDir}. Run \`docs build\` first.`);
       }
-
-      const logger = createLoggerFromGlobal();
-
-      const port = parseInt(options.port, 10);
-      const host = options.host;
 
       const MIME_TYPES: Record<string, string> = {
         ".html": "text/html; charset=utf-8",
@@ -594,32 +639,37 @@ program
       };
 
       const server = createServer((req, res) => {
-        const url = new URL(req.url ?? "/", `http://${host}:${port}`);
-        let pathname = decodeURIComponent(url.pathname);
+        try {
+          const url = new URL(req.url ?? "/", `http://${host}:${port}`);
+          let pathname = decodeURIComponent(url.pathname);
 
-        if (pathname.endsWith("/")) {
-          pathname = join(pathname, "index.html");
+          if (pathname.endsWith("/")) {
+            pathname = join(pathname, "index.html");
+          }
+
+          const filePath = join(serveDir, pathname);
+
+          if (!isPathWithinRoot(serveDir, filePath)) {
+            res.writeHead(403);
+            res.end("Forbidden");
+            return;
+          }
+
+          if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+            res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+            res.end("<h1>404 Not Found</h1>");
+            return;
+          }
+
+          const ext = extname(filePath).toLowerCase();
+          const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
+
+          res.writeHead(200, { "Content-Type": contentType });
+          createReadStream(filePath).pipe(res);
+        } catch {
+          res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+          res.end("Bad Request");
         }
-
-        const filePath = join(serveDir, pathname);
-
-        if (!filePath.startsWith(serveDir)) {
-          res.writeHead(403);
-          res.end("Forbidden");
-          return;
-        }
-
-        if (!existsSync(filePath) || !statSync(filePath).isFile()) {
-          res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
-          res.end("<h1>404 Not Found</h1>");
-          return;
-        }
-
-        const ext = extname(filePath).toLowerCase();
-        const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
-
-        res.writeHead(200, { "Content-Type": contentType });
-        createReadStream(filePath).pipe(res);
       });
 
       server.listen(port, host, () => {
@@ -636,10 +686,9 @@ program
   .command("upgrade")
   .description("Check for and install updates to @vetwo/docs and related packages")
   .option("--check", "Only check for updates, don't install")
-  .action((options) => {
-    const logger = createLoggerFromGlobal();
+  .action(async (options) => {
+    const { rootDir, logger } = await commandContext();
     try {
-      const rootDir = findRootDir();
       const pkgPath = join(rootDir, "package.json");
       if (!existsSync(pkgPath)) {
         exitWithError("No package.json found");
@@ -663,6 +712,10 @@ program
       logger.info(`Found ${vetwoPackages.length} @vetwo package(s): ${vetwoPackages.join(", ")}`);
 
       for (const pkgName of vetwoPackages) {
+        if (!isSafePackageName(pkgName)) {
+          logger.warn(`  Skipping unexpected dependency name: ${pkgName}`);
+          continue;
+        }
         try {
           const currentVersion = allDeps[pkgName] ?? "unknown";
           let latestVersion: string;
@@ -706,7 +759,10 @@ program
       };
       const installBase = installCmdMap[pm] ?? "npm install";
 
-      const packagesToUpdate = vetwoPackages.map((p) => `${p}@latest`).join(" ");
+      const packagesToUpdate = vetwoPackages
+        .filter((p) => isSafePackageName(p))
+        .map((p) => `${p}@latest`)
+        .join(" ");
       const cmd = `${installBase} ${packagesToUpdate}`;
 
       logger.info(`Running: ${cmd}`);
@@ -722,10 +778,9 @@ const plugin = program.command("plugin").description("Manage documentation plugi
 plugin
   .command("list")
   .description("List installed plugins")
-  .action(() => {
-    const logger = createLoggerFromGlobal();
+  .action(async () => {
+    const { rootDir, logger } = await commandContext();
     try {
-      const rootDir = findRootDir();
       const pkgPath = join(rootDir, "package.json");
       if (!existsSync(pkgPath)) {
         exitWithError("No package.json found");
@@ -760,10 +815,12 @@ plugin
   .command("add <name>")
   .description("Install a plugin")
   .option("--dev", "Install as devDependency (default: true)", true)
-  .action((name: string, _options: { dev: boolean }) => {
-    const logger = createLoggerFromGlobal();
+  .action(async (name: string, _options: { dev: boolean }) => {
+    if (!isSafePackageName(name)) {
+      exitWithError(`Refusing to install unexpected plugin name: ${name}`);
+    }
+    const { rootDir, logger } = await commandContext();
     try {
-      const rootDir = findRootDir();
       const detection = detectProject(rootDir);
       const pm = detection.packageManager;
 
@@ -789,10 +846,12 @@ plugin
 plugin
   .command("remove <name>")
   .description("Uninstall a plugin")
-  .action((name: string) => {
-    const logger = createLoggerFromGlobal();
+  .action(async (name: string) => {
+    if (!isSafePackageName(name)) {
+      exitWithError(`Refusing to uninstall unexpected plugin name: ${name}`);
+    }
+    const { rootDir, logger } = await commandContext();
     try {
-      const rootDir = findRootDir();
       const detection = detectProject(rootDir);
       const pm = detection.packageManager;
 
@@ -819,8 +878,8 @@ const theme = program.command("theme").description("Manage documentation themes"
 theme
   .command("list")
   .description("List available themes")
-  .action(() => {
-    const logger = createLoggerFromGlobal();
+  .action(async () => {
+    const { rootDir, logger } = await commandContext();
     try {
       logger.info("Built-in themes:");
       const builtInRows: string[][] = [];
@@ -831,7 +890,6 @@ theme
         logger.table(["Name", "Label"], builtInRows);
       }
 
-      const rootDir = findRootDir();
       const pkgPath = join(rootDir, "package.json");
       if (existsSync(pkgPath)) {
         const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as {
@@ -859,10 +917,12 @@ theme
 theme
   .command("install <name>")
   .description("Install a theme package")
-  .action((name: string) => {
-    const logger = createLoggerFromGlobal();
+  .action(async (name: string) => {
+    if (!isSafePackageName(name)) {
+      exitWithError(`Refusing to install unexpected theme name: ${name}`);
+    }
+    const { rootDir, logger } = await commandContext();
     try {
-      const rootDir = findRootDir();
       const detection = detectProject(rootDir);
       const pm = detection.packageManager;
 
@@ -901,6 +961,11 @@ registerContentCommands(program, {
 });
 
 registerIncrementalCommands(program, {
+  logger: createLoggerSync(),
+  findRootDir,
+});
+
+registerIntegrationCommands(program, {
   logger: createLoggerSync(),
   findRootDir,
 });

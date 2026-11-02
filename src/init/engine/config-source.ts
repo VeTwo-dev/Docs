@@ -61,10 +61,11 @@ function fromJsonObject(obj: Record<string, unknown>): ExtractedWorkspace {
     if (typeof out["directory"] === "string") result.outputDirectory = out["directory"];
     const layoutObj = out["layout"] as Record<string, unknown> | undefined;
     if (layoutObj !== undefined) {
-      const layout: { next?: boolean; markdown?: boolean; static?: boolean } = {};
+      const layout: { next?: boolean; markdown?: boolean; static?: boolean; site?: boolean } = {};
       if (typeof layoutObj["next"] === "boolean") layout.next = layoutObj["next"];
       if (typeof layoutObj["markdown"] === "boolean") layout.markdown = layoutObj["markdown"];
       if (typeof layoutObj["static"] === "boolean") layout.static = layoutObj["static"];
+      if (typeof layoutObj["site"] === "boolean") layout.site = layoutObj["site"];
       result.layout = layout;
     }
   }
@@ -81,13 +82,15 @@ function fromJs(source: string): ExtractedWorkspace {
   result.outputDirectory =
     /output\s*:\s*\{\s*directory\s*:\s*["']([^"',}\s]+)["']/.exec(source)?.[1] ??
     QUOTED("output").exec(source)?.[1];
-  const layout: { next?: boolean; markdown?: boolean; static?: boolean } = {};
+  const layout: { next?: boolean; markdown?: boolean; static?: boolean; site?: boolean } = {};
   const next = BOOL("next").exec(source)?.[1];
   const markdown = BOOL("markdown").exec(source)?.[1];
   const staticFlag = BOOL("static").exec(source)?.[1];
   if (next !== undefined) layout.next = next === "true";
   if (markdown !== undefined) layout.markdown = markdown === "true";
   if (staticFlag !== undefined) layout.static = staticFlag === "true";
+  const siteFlag = BOOL("site").exec(source)?.[1];
+  if (siteFlag !== undefined) layout.site = siteFlag === "true";
   if (Object.keys(layout).length > 0) result.layout = layout;
   const agentMatch = /agent\s*:\s*\{/.exec(source);
   if (agentMatch !== null) {
@@ -101,7 +104,7 @@ function fromJs(source: string): ExtractedWorkspace {
 
 function fromYaml(source: string): ExtractedWorkspace {
   const result = empty();
-  const layout: { next?: boolean; markdown?: boolean; static?: boolean } = {};
+  const layout: { next?: boolean; markdown?: boolean; static?: boolean; site?: boolean } = {};
   let section: "output" | "agent" | "layout" | undefined;
   for (const raw of source.split(/\r?\n/)) {
     const line = raw.replace(/^\s+/, "");
@@ -121,9 +124,11 @@ function fromYaml(source: string): ExtractedWorkspace {
       const next = /^next\s*:\s*(true|false)$/.exec(line)?.[1];
       const markdown = /^markdown\s*:\s*(true|false)$/.exec(line)?.[1];
       const staticFlag = /^static\s*:\s*(true|false)$/.exec(line)?.[1];
+      const siteFlag = /^site\s*:\s*(true|false)$/.exec(line)?.[1];
       if (next !== undefined) layout.next = next === "true";
       if (markdown !== undefined) layout.markdown = markdown === "true";
       if (staticFlag !== undefined) layout.static = staticFlag === "true";
+      if (siteFlag !== undefined) layout.site = siteFlag === "true";
     } else if (section === "agent") {
       const enabled = /^enabled\s*:\s*(true|false)$/.exec(line)?.[1];
       if (enabled !== undefined) result.agentEnabled = enabled === "true";

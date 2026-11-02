@@ -51,10 +51,7 @@ export function buildChangeGraph(artifacts: Readonly<Record<string, ArtifactEntr
  * Propagate impact from seed nodes through dependents (BFS).
  * Returns all affected nodes excluding the seeds themselves.
  */
-export function propagateImpact(
-  graph: ChangeGraph,
-  seeds: readonly string[],
-): readonly string[] {
+export function propagateImpact(graph: ChangeGraph, seeds: readonly string[]): readonly string[] {
   const affected = new Set<string>();
   const queue = [...seeds];
   while (queue.length > 0) {

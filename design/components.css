@@ -1,0 +1,755 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VeTwo Component Styles
+   ─────────────────────────────────────────────────────────────────────
+   Every `.vetwo-*` class emitted by the site renderers. One definition
+   per class; consume tokens from tokens.css only. Scoped article
+   typography uses `:where()` so it never overrides stronger rules.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── Accessibility: skip link ───────────────────────────────────────── */
+
+.vetwo-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 100;
+  padding: var(--vetwo-space-2) var(--vetwo-space-3);
+  background: var(--vetwo-accent);
+  color: var(--vetwo-on-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 0 0 var(--vetwo-radius-small) 0;
+}
+
+.vetwo-skip-link:focus {
+  top: 0;
+  color: var(--vetwo-on-accent);
+  text-decoration: none;
+}
+
+/* ─── Site header ────────────────────────────────────────────────────── */
+
+.vetwo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vetwo-space-4);
+  padding: var(--vetwo-space-3) var(--vetwo-space-6);
+  border-bottom: 1px solid var(--vetwo-border);
+  background: color-mix(in srgb, var(--vetwo-bg) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  position: sticky;
+  top: 0;
+  z-index: var(--vetwo-z-header);
+}
+
+.vetwo-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vetwo-space-3);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  color: var(--vetwo-fg);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.vetwo-brand:hover {
+  color: var(--vetwo-fg);
+  text-decoration: none;
+}
+
+.vetwo-brand svg,
+.vetwo-brand img {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: block;
+  border-radius: var(--vetwo-radius-small);
+}
+
+/* One accent dot keeps the brand anchored without emoji or logos. */
+.vetwo-brand::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: none;
+  border-radius: var(--vetwo-radius-pill);
+  background: var(--vetwo-accent);
+  box-shadow: 0 0 0 3px var(--vetwo-accent-dim);
+}
+
+.vetwo-header-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--vetwo-space-1);
+}
+
+.vetwo-header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vetwo-space-2);
+  color: var(--vetwo-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: var(--vetwo-space-2) var(--vetwo-space-3);
+  border-radius: var(--vetwo-radius-small);
+  transition:
+    color var(--vetwo-dur-fast) var(--vetwo-ease),
+    background-color var(--vetwo-dur-fast) var(--vetwo-ease);
+}
+
+.vetwo-header-link:hover {
+  color: var(--vetwo-fg);
+  background: var(--vetwo-accent-dim);
+  text-decoration: none;
+}
+
+/* ─── Layout shell (sidebar + article) ───────────────────────────────── */
+
+.vetwo-layout {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - var(--vetwo-header-h));
+}
+
+.vetwo-sidebar {
+  width: var(--vetwo-sidebar-w);
+  flex: 0 0 var(--vetwo-sidebar-w);
+  background: var(--vetwo-sidebar);
+  border-right: 1px solid var(--vetwo-border);
+  padding: var(--vetwo-space-6) var(--vetwo-space-4) var(--vetwo-space-8);
+  position: sticky;
+  top: var(--vetwo-header-h);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--vetwo-header-h));
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.vetwo-sidebar h1 {
+  font-size: 1.02rem;
+  margin: 0 0 var(--vetwo-space-1);
+  letter-spacing: -0.01em;
+}
+
+.vetwo-sidebar > p {
+  color: var(--vetwo-muted);
+  font-size: 0.8rem;
+  margin: 0 0 var(--vetwo-space-5);
+}
+
+.vetwo-nav section {
+  margin-top: var(--vetwo-space-5);
+  padding-top: var(--vetwo-space-4);
+  border-top: 1px solid var(--vetwo-border);
+}
+
+.vetwo-nav section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.vetwo-nav h2,
+.vetwo-sidebar h3 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--vetwo-muted);
+  margin: 0 0 var(--vetwo-space-2);
+}
+
+.vetwo-nav ul,
+.vetwo-sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vetwo-nav li,
+.vetwo-sidebar li {
+  margin: 0.125rem 0;
+}
+
+.vetwo-nav a,
+.vetwo-sidebar a {
+  position: relative;
+  color: var(--vetwo-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  display: block;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--vetwo-radius-small);
+  transition:
+    color var(--vetwo-dur-fast) var(--vetwo-ease),
+    background-color var(--vetwo-dur-fast) var(--vetwo-ease);
+}
+
+.vetwo-nav a:hover,
+.vetwo-sidebar a:hover {
+  background: var(--vetwo-surface);
+  color: var(--vetwo-fg);
+}
+
+/* Active page: accent text plus a quiet inset bar — state is conveyed by
+   position, weight, and color together, never color alone. */
+.vetwo-nav a[aria-current="page"],
+.vetwo-sidebar a[aria-current="page"] {
+  background: var(--vetwo-accent-dim);
+  color: var(--vetwo-accent);
+  font-weight: 600;
+}
+
+.vetwo-nav a[aria-current="page"]::before,
+.vetwo-sidebar a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -0.65rem;
+  top: 0.3rem;
+  bottom: 0.3rem;
+  width: 2px;
+  border-radius: var(--vetwo-radius-pill);
+  background: var(--vetwo-accent);
+}
+
+.vetwo-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 var(--vetwo-space-4);
+  box-sizing: border-box;
+}
+
+/* ─── Article typography ─────────────────────────────────────────────── */
+
+.vetwo-doc-article {
+  max-width: var(--vetwo-measure);
+  margin: 0 auto;
+  padding: var(--vetwo-space-6) var(--vetwo-space-5) var(--vetwo-space-8);
+}
+
+:where(.vetwo-doc-article) p {
+  margin: var(--vetwo-space-3) 0;
+}
+
+:where(.vetwo-doc-article) a:hover {
+  text-decoration: underline;
+}
+
+:where(.vetwo-doc-article) hr {
+  border: 0;
+  border-top: 1px solid var(--vetwo-border);
+  margin: var(--vetwo-space-6) 0;
+}
+
+:where(.vetwo-doc-article) ul,
+:where(.vetwo-doc-article) ol {
+  margin: var(--vetwo-space-3) 0;
+  padding-inline-start: 1.5rem;
+}
+
+:where(.vetwo-doc-article) li {
+  margin: var(--vetwo-space-1) 0;
+}
+
+:where(.vetwo-doc-article) li::marker {
+  color: var(--vetwo-accent);
+}
+
+:where(.vetwo-doc-article) blockquote {
+  margin: var(--vetwo-space-4) 0;
+  padding: var(--vetwo-space-1) 0 var(--vetwo-space-1) var(--vetwo-space-4);
+  border-inline-start: 3px solid var(--vetwo-border-strong);
+  color: var(--vetwo-muted);
+}
+
+:where(.vetwo-doc-article) figure {
+  margin: var(--vetwo-space-5) 0;
+}
+
+:where(.vetwo-doc-article) figure img {
+  border: 1px solid var(--vetwo-border);
+  border-radius: var(--vetwo-radius-medium);
+  background: var(--vetwo-surface);
+}
+
+/* Inline code: a quiet chip that reads as a token, not a button. */
+:where(.vetwo-doc-article) :not(pre) > code {
+  font-size: 0.85em;
+  background: var(--vetwo-code-bg);
+  border: 1px solid var(--vetwo-border);
+  color: var(--vetwo-fg);
+  padding: 0.1em 0.4em;
+  border-radius: var(--vetwo-radius-small);
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+/* Code blocks: one shared ink panel — dark in both schemes, so code is
+   the one element that keeps its cinema regardless of theme. */
+:where(pre, .vetwo-api-signature pre, .vetwo-article pre) {
+  position: relative;
+  background: var(--vetwo-code-panel);
+  border: 1px solid var(--vetwo-code-border);
+  border-radius: var(--vetwo-radius-medium);
+  padding: var(--vetwo-space-4);
+  font-size: 0.85rem;
+  line-height: var(--vetwo-leading-code);
+  color: var(--vetwo-code-fg);
+  margin: var(--vetwo-space-4) 0;
+  tab-size: 2;
+}
+
+/* Language caption (static target emits data-language). */
+pre[data-language]::after {
+  content: attr(data-language);
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-family: var(--vetwo-font-code);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vetwo-tok-comment);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Syntax token classes (static target highlighter; shiki output in the
+   Fumadocs target carries its own inline colors). */
+:where(code) .vetwo-tok-comment {
+  color: var(--vetwo-tok-comment);
+  font-style: italic;
+}
+
+:where(code) .vetwo-tok-string {
+  color: var(--vetwo-tok-string);
+}
+
+:where(code) .vetwo-tok-keyword {
+  color: var(--vetwo-tok-keyword);
+}
+
+:where(code) .vetwo-tok-number {
+  color: var(--vetwo-tok-number);
+}
+
+:where(code) .vetwo-tok-fn {
+  color: var(--vetwo-tok-fn);
+}
+
+:where(code) .vetwo-tok-punct {
+  color: var(--vetwo-tok-punct);
+}
+
+:where(.vetwo-doc-article) h1 {
+  margin: var(--vetwo-space-1) 0 var(--vetwo-space-4);
+}
+
+:where(.vetwo-doc-article) h2 {
+  margin: var(--vetwo-space-7) 0 var(--vetwo-space-3);
+  padding-top: var(--vetwo-space-4);
+  border-top: 1px solid var(--vetwo-border);
+}
+
+:where(.vetwo-doc-article) h3 {
+  margin: var(--vetwo-space-5) 0 var(--vetwo-space-2);
+}
+
+:where(.vetwo-doc-article) h4 {
+  margin: var(--vetwo-space-4) 0 var(--vetwo-space-2);
+}
+
+.vetwo-doc-section {
+  color: var(--vetwo-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--vetwo-space-1);
+}
+
+.vetwo-doc-description {
+  color: var(--vetwo-muted);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0 0 var(--vetwo-space-5);
+}
+
+/* ─── Breadcrumbs ────────────────────────────────────────────────────── */
+
+.vetwo-breadcrumbs {
+  font-size: 0.8rem;
+  color: var(--vetwo-muted);
+  margin-top: var(--vetwo-space-3);
+}
+
+.vetwo-breadcrumbs a {
+  color: var(--vetwo-accent);
+  text-decoration: none;
+}
+
+.vetwo-breadcrumbs a:hover {
+  color: var(--vetwo-accent-strong);
+  text-decoration: underline;
+}
+
+.vetwo-crumb-sep {
+  margin: 0 0.4em;
+  color: var(--vetwo-border-strong);
+  user-select: none;
+}
+
+.vetwo-breadcrumbs [aria-current="location"] {
+  color: var(--vetwo-muted);
+  font-weight: 600;
+}
+
+/* ─── Tables ─────────────────────────────────────────────────────────── */
+
+.vetwo-table,
+.vetwo-param-table,
+:where(.vetwo-doc-article) table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  margin: var(--vetwo-space-4) 0;
+  font-size: 0.92em;
+  border: 1px solid var(--vetwo-border-strong);
+  border-radius: var(--vetwo-radius-medium);
+  overflow: hidden;
+}
+
+.vetwo-table th,
+.vetwo-table td,
+.vetwo-param-table th,
+.vetwo-param-table td,
+:where(.vetwo-doc-article) th,
+:where(.vetwo-doc-article) td {
+  padding: var(--vetwo-space-2) var(--vetwo-space-3);
+  text-align: start;
+  vertical-align: top;
+  border-bottom: 1px solid var(--vetwo-border);
+}
+
+.vetwo-table th:not(:last-child),
+.vetwo-table td:not(:last-child),
+.vetwo-param-table th:not(:last-child),
+.vetwo-param-table td:not(:last-child),
+:where(.vetwo-doc-article) th:not(:last-child),
+:where(.vetwo-doc-article) td:not(:last-child) {
+  border-inline-end: 1px solid var(--vetwo-border);
+}
+
+.vetwo-table tbody tr:last-child td,
+.vetwo-param-table tbody tr:last-child td,
+:where(.vetwo-doc-article) tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.vetwo-table th,
+.vetwo-param-table th,
+:where(.vetwo-doc-article) th {
+  background: var(--vetwo-surface);
+  font-weight: 700;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vetwo-muted);
+}
+
+.vetwo-param-table code {
+  color: var(--vetwo-accent);
+  font-weight: 500;
+}
+
+/* ─── Callouts ───────────────────────────────────────────────────────── */
+
+.vetwo-callout {
+  display: flex;
+  gap: var(--vetwo-space-3);
+  border: 1px solid var(--vetwo-border);
+  border-inline-start: 3px solid var(--vetwo-tone-note);
+  background: var(--vetwo-surface);
+  padding: var(--vetwo-space-3) var(--vetwo-space-4);
+  border-radius: var(--vetwo-radius-small);
+  margin: var(--vetwo-space-4) 0;
+  font-size: 0.95em;
+}
+
+/* A tone dot reinforces the color of the accent bar (not color alone:
+   the strong label inside names the tone in text). */
+.vetwo-callout::before {
+  content: "";
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.45em;
+  border-radius: var(--vetwo-radius-pill);
+  background: var(--vetwo-tone-note);
+}
+
+.vetwo-callout-note {
+  border-inline-start-color: var(--vetwo-tone-note);
+}
+
+.vetwo-callout-note::before {
+  background: var(--vetwo-tone-note);
+}
+
+.vetwo-callout-tip {
+  border-inline-start-color: var(--vetwo-tone-tip);
+  background: var(--vetwo-tone-tip-bg);
+}
+
+.vetwo-callout-tip::before {
+  background: var(--vetwo-tone-tip);
+}
+
+.vetwo-callout-warning {
+  border-inline-start-color: var(--vetwo-tone-warning);
+  background: var(--vetwo-tone-warning-bg);
+}
+
+.vetwo-callout-warning::before {
+  background: var(--vetwo-tone-warning);
+}
+
+.vetwo-callout-deprecated {
+  border-inline-start-color: var(--vetwo-tone-danger);
+  background: var(--vetwo-tone-danger-bg);
+}
+
+.vetwo-callout-deprecated::before {
+  background: var(--vetwo-tone-danger);
+}
+
+/* ─── API reference pieces ───────────────────────────────────────────── */
+
+.vetwo-api-signature {
+  border: 1px solid var(--vetwo-border);
+  border-radius: var(--vetwo-radius-medium);
+  background: var(--vetwo-surface);
+  padding: var(--vetwo-space-4);
+  margin: var(--vetwo-space-4) 0;
+}
+
+.vetwo-api-signature pre {
+  margin: var(--vetwo-space-3) 0 0;
+  border: 0;
+  border-radius: var(--vetwo-radius-small);
+  padding: var(--vetwo-space-3);
+}
+
+.vetwo-api-badge {
+  display: inline-block;
+  font-family: var(--vetwo-font-code);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.1em 0.5em;
+  border-radius: var(--vetwo-radius-small);
+  background: var(--vetwo-accent-dim);
+  color: var(--vetwo-accent);
+}
+
+/* ─── Search page ────────────────────────────────────────────────────── */
+
+.vetwo-search {
+  display: grid;
+  gap: var(--vetwo-space-3);
+  margin: var(--vetwo-space-4) 0 0;
+}
+
+.vetwo-search-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.vetwo-search-input {
+  font: inherit;
+  padding: var(--vetwo-space-3) var(--vetwo-space-4);
+  border: 1px solid var(--vetwo-border);
+  border-radius: var(--vetwo-radius-medium);
+  background: var(--vetwo-surface);
+  color: var(--vetwo-fg);
+  width: 100%;
+  box-sizing: border-box;
+  transition:
+    border-color var(--vetwo-dur-fast) var(--vetwo-ease),
+    box-shadow var(--vetwo-dur-fast) var(--vetwo-ease);
+}
+
+.vetwo-search-input:focus {
+  outline: none;
+  border-color: var(--vetwo-accent);
+  box-shadow: 0 0 0 3px var(--vetwo-accent-dim);
+}
+
+.vetwo-search-hint {
+  color: var(--vetwo-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.vetwo-search-status {
+  color: var(--vetwo-muted);
+  font-size: 0.9rem;
+  min-height: 1.5em;
+}
+
+.vetwo-search-results {
+  list-style: none;
+  margin: var(--vetwo-space-4) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--vetwo-space-3);
+}
+
+.vetwo-search-results li {
+  border: 1px solid var(--vetwo-border);
+  border-radius: var(--vetwo-radius-medium);
+  background: var(--vetwo-surface);
+  padding: var(--vetwo-space-3) var(--vetwo-space-4);
+  transition:
+    border-color var(--vetwo-dur-fast) var(--vetwo-ease),
+    box-shadow var(--vetwo-dur-fast) var(--vetwo-ease);
+}
+
+.vetwo-search-results li:hover {
+  border-color: var(--vetwo-accent);
+  box-shadow: var(--vetwo-shadow-strong);
+}
+
+.vetwo-search-results a {
+  font-weight: 700;
+}
+
+.vetwo-search-results a:hover {
+  text-decoration: underline;
+}
+
+.vetwo-search-results p {
+  margin: var(--vetwo-space-1) 0 0;
+  color: var(--vetwo-muted);
+  font-size: 0.9rem;
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────── */
+
+.vetwo-footer {
+  border-top: 1px solid var(--vetwo-border);
+  padding: var(--vetwo-space-6) var(--vetwo-space-5) var(--vetwo-space-8);
+}
+
+.vetwo-footer p {
+  max-width: var(--vetwo-measure);
+  margin: 0 auto;
+  color: var(--vetwo-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   Fumadocs target extras (custom chrome wrapping the Fumadocs UI)
+   ═════════════════════════════════════════════════════════════════════ */
+
+.vetwo-article {
+  max-width: var(--vetwo-measure);
+}
+
+.vetwo-article a:hover {
+  text-decoration: underline;
+}
+
+.vetwo-graph-page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--vetwo-space-6) var(--vetwo-space-5) var(--vetwo-space-8);
+}
+
+.vetwo-graph-canvas {
+  border: 1px solid var(--vetwo-border);
+  border-radius: var(--vetwo-radius-large);
+  overflow: hidden;
+  background: var(--vetwo-surface);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────── */
+
+@media (max-width: 920px) {
+  .vetwo-header {
+    flex-wrap: wrap;
+    padding: var(--vetwo-space-3) var(--vetwo-space-4);
+  }
+
+  .vetwo-brand {
+    white-space: normal;
+  }
+
+  .vetwo-layout {
+    flex-direction: column;
+  }
+
+  .vetwo-sidebar {
+    width: auto;
+    flex: none;
+    max-height: none;
+    position: static;
+    border-right: 0;
+    border-bottom: 1px solid var(--vetwo-border);
+    padding: var(--vetwo-space-4) var(--vetwo-space-5)
+      var(--vetwo-space-5);
+  }
+
+  .vetwo-doc-article {
+    padding: var(--vetwo-space-5) var(--vetwo-space-4)
+      var(--vetwo-space-7);
+  }
+}
+
+@media (max-width: 480px) {
+  .vetwo-header {
+    padding: var(--vetwo-space-3);
+  }
+
+  .vetwo-header-nav {
+    gap: 0;
+  }
+
+  .vetwo-doc-article {
+    padding-inline: var(--vetwo-space-3);
+  }
+}
+
+/* ─── Print: pull the article forward, drop the chrome ───────────────── */
+
+@media print {
+  .vetwo-header,
+  .vetwo-sidebar,
+  .vetwo-skip-link {
+    display: none !important;
+  }
+
+  .vetwo-layout {
+    min-height: 0;
+  }
+
+  pre,
+  :where(pre) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .vetwo-doc-article,
+  .vetwo-article {
+    max-width: none;
+    padding: 0;
+  }
+}

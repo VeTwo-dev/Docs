@@ -64,8 +64,20 @@ export interface InstallationKnowledge {
 
 export interface ConfigurationKnowledge {
   readonly configFiles: readonly string[];
-  readonly configKeys: readonly { key: string; type?: string; description?: string; required?: boolean; defaultValue?: string }[];
-  readonly envVars: readonly { name: string; purpose?: string; required?: boolean; defaultValue?: string; secret?: boolean }[];
+  readonly configKeys: readonly {
+    key: string;
+    type?: string;
+    description?: string;
+    required?: boolean;
+    defaultValue?: string;
+  }[];
+  readonly envVars: readonly {
+    name: string;
+    purpose?: string;
+    required?: boolean;
+    defaultValue?: string;
+    secret?: boolean;
+  }[];
 }
 
 export interface CliKnowledge {
@@ -81,7 +93,12 @@ export interface CliKnowledge {
 }
 
 export interface ArchitectureKnowledge {
-  readonly modules: readonly { path: string; responsibility: string; inputs?: string; outputs?: string }[];
+  readonly modules: readonly {
+    path: string;
+    responsibility: string;
+    inputs?: string;
+    outputs?: string;
+  }[];
   readonly mermaidDiagrams: readonly { title: string; code: string }[];
   readonly directoryStructure: readonly { path: string; explanation: string }[];
 }
@@ -94,7 +111,12 @@ export interface DependencyKnowledge {
 }
 
 export interface ExampleKnowledge {
-  readonly discovered: readonly { title: string; path?: string; code?: string; source: "examples" | "tests" | "readme" | "jsdoc" }[];
+  readonly discovered: readonly {
+    title: string;
+    path?: string;
+    code?: string;
+    source: "examples" | "tests" | "readme" | "jsdoc";
+  }[];
 }
 
 export interface DevelopmentKnowledge {

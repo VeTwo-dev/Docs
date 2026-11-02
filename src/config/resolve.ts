@@ -40,7 +40,7 @@ export function resolveOutputDirectory(config: Pick<DocsConfig, "output">): stri
 export function resolveOutputLayout(config: Pick<DocsConfig, "output">): OutputLayoutConfig {
   const output = config.output;
   if (typeof output === "string") {
-    return { directory: output, layout: { next: true, markdown: true, static: true } };
+    return { directory: output, layout: { next: true, markdown: true, static: true, site: true } };
   }
   return output;
 }

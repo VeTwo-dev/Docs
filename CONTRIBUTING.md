@@ -111,24 +111,28 @@ A maintainer will review your PR. You may be asked to make changes before it is 
 
 ```
 src/
-  builders/        # Output builders
-  cache/           # Build caching logic
-  cli/             # CLI entry point and commands
-  config/          # Configuration loading and types
-  constants/       # Default values and constants
-  core/            # Build pipeline and context
-  discovery/       # File and project discovery
-  features/        # Feature generators (search, SEO, RSS, etc.)
-  filesystem/      # File system utilities
-  hooks/           # Lifecycle hook registry
-  logger/          # Logging utilities
-  plugins/         # Plugin registry and built-in plugins
-  renderers/       # Output rendering
-  templates/       # HTML templates
-  types/           # TypeScript type definitions
-  utils/           # General utilities
-  index.ts         # Public API exports
+  index.ts, react.ts      # Published entry points (plus config/api/… subpaths)
+  cli/                    # CLI entry point and commands
+  engine/                 # DocsEngine lifecycle, service container, materialization
+  site/                   # Canonical content pipeline (discovery → model → IR)
+  renderers/              # Output planning + Fumadocs/static/Markdown/Next.js targets
+  documentation/compiler/ # Legacy inference pipeline + shared IR/manifest types
+  config/                 # Loading, Zod validation, defineDocs defaults
+  scanner/                # File and project discovery
+  content/                # Authored-content inspection, MDX parsing, regeneration
+  state/                  # Namespaced engine state under .vetwo/docs/
+  init/                   # Plan/apply workspace bootstrap
+  dev-server/             # Development server with live reload
+  api/, intelligence/, ai/, incremental/, integrations/  # Retained legacy tooling
+  plugins/, themes/, hooks/  # Plugin system, theme registry, lifecycle hooks
+  analyzer/, symbols/, references/, graph/, languages/, compiler/
+  filesystem/, errors/, logger/, cache/, utils/, types/  # Infrastructure
+test/cwd-fallback.test.ts  # Isolated cwd-sensitive engine test
+docs/                    # Generated self-documentation (git-ignored output)
+skills/docs-bootstrap/   # Agent skill for bootstrapping docs
 ```
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for module responsibilities and [HOW_WORKS.md](./HOW_WORKS.md) for the full guide.
 
 ## Reporting Issues
 

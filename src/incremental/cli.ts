@@ -9,11 +9,7 @@ import type { Command } from "commander";
 import type { ProjectChange } from "./change-detection.js";
 
 import { buildCompilerInput } from "../documentation/compiler/cli.js";
-import {
-  detectChanges,
-  gitChangedFiles,
-  scanProjectFiles,
-} from "./change-detection.js";
+import { detectChanges, gitChangedFiles, scanProjectFiles } from "./change-detection.js";
 import { buildChangeGraph, loadChangeGraph } from "./graph.js";
 import { computeDocumentationImpact } from "./impact.js";
 import { loadSnapshot } from "./snapshot.js";
@@ -146,44 +142,49 @@ export function registerIncrementalCommands(
     .option("--dry-run", "Plan without writing")
     .option("--force", "Update manually-edited generated pages (never protected ones)")
     .option("--debug", "Explain every invalidation decision")
-    .action((options: {
-      all?: boolean;
-      changed?: boolean;
-      git?: string;
-      dryRun?: boolean;
-      force?: boolean;
-      debug?: boolean;
-    }) => {
-      const { rootDir, input } = prepare();
-      try {
-        const result = runIncrementalUpdate({
-          rootDir,
-          input,
-          all: options.all === true,
-          gitRef: options.git,
-          dryRun: options.dryRun === true,
-          force: options.force === true,
-          debug: options.debug === true || process.env["VETWO_LOG_LEVEL"] === "debug",
-        });
+    .action(
+      (options: {
+        all?: boolean;
+        changed?: boolean;
+        git?: string;
+        dryRun?: boolean;
+        force?: boolean;
+        debug?: boolean;
+      }) => {
+        const { rootDir, input } = prepare();
+        try {
+          const result = runIncrementalUpdate({
+            rootDir,
+            input,
+            all: options.all === true,
+            gitRef: options.git,
+            dryRun: options.dryRun === true,
+            force: options.force === true,
+            debug: options.debug === true || process.env["VETWO_LOG_LEVEL"] === "debug",
+          });
 
-        logger.info(`[${result.timings.totalMs}ms] detection ${result.timings.detectionMs}ms · impact ${result.timings.impactMs}ms · regeneration ${result.timings.regenerationMs}ms`);
-        logger.info(`Impact level: ${result.impact.level}`);
-        if (options.dryRun === true) {
-          logger.success(`Dry run — ${result.impact.affectedPages.length} page(s) would be updated, ${result.preservedCount} preserved`);
-          return;
+          logger.info(
+            `[${result.timings.totalMs}ms] detection ${result.timings.detectionMs}ms · impact ${result.timings.impactMs}ms · regeneration ${result.timings.regenerationMs}ms`,
+          );
+          logger.info(`Impact level: ${result.impact.level}`);
+          if (options.dryRun === true) {
+            logger.success(
+              `Dry run — ${result.impact.affectedPages.length} page(s) would be updated, ${result.preservedCount} preserved`,
+            );
+            return;
+          }
+          logger.success(
+            `${result.regeneratedFiles.length} file(s) written, ${result.preservedCount} preserved`,
+          );
+          for (const line of result.impact.explanation.slice(0, 5)) {
+            logger.info(`  ${line}`);
+          }
+        } catch (error) {
+          logger.error(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
         }
-        logger.success(
-          `${result.regeneratedFiles.length} file(s) written, ${result.preservedCount} preserved`,
-        );
-        for (const line of result.impact.explanation.slice(0, 5)) {
-          logger.info(`  ${line}`);
-        }
-      } catch (error) {
-        logger.error(error instanceof Error ? error.message : String(error));
-        process.exitCode = 1;
-      }
-    });
-
+      },
+    );
 }
 
 function changeIcon(kind: string): string {
@@ -201,7 +202,10 @@ function changeIcon(kind: string): string {
   }
 }
 
-function filterChanges(changes: readonly ProjectChange[], paths: readonly string[]): readonly ProjectChange[] {
+function filterChanges(
+  changes: readonly ProjectChange[],
+  paths: readonly string[],
+): readonly ProjectChange[] {
   const set = new Set(paths);
   return changes.filter((c) => set.has(c.path) || (c.oldPath !== undefined && set.has(c.oldPath)));
 }

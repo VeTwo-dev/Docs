@@ -34,9 +34,8 @@ export function semanticHash(contents: string): string {
 export function stripSemanticsPreserving(source: string): string {
   let withoutBlockComments = source.replace(/\/\*[\s\S]*?\*\//g, "");
   // Line comments — but not inside strings (heuristic: count quotes before //).
-  withoutBlockComments = withoutBlockComments.replace(
-    /^[^"'\n]*\/\/.*$/gm,
-    (line) => (isLikelyComment(line) ? "" : line),
+  withoutBlockComments = withoutBlockComments.replace(/^[^"'\n]*\/\/.*$/gm, (line) =>
+    isLikelyComment(line) ? "" : line,
   );
   return withoutBlockComments
     .split(/\r?\n/)
@@ -53,11 +52,7 @@ function isLikelyComment(line: string): boolean {
 /**
  * Classify a modification by comparing both fingerprint layers.
  */
-export type ModificationKind =
-  | "unchanged"
-  | "formatting-only"
-  | "comment-only"
-  | "semantic";
+export type ModificationKind = "unchanged" | "formatting-only" | "comment-only" | "semantic";
 
 export function classifyModification(
   beforeContents: string,
@@ -67,8 +62,7 @@ export function classifyModification(
   const semanticBefore = semanticHash(beforeContents);
   const semanticAfter = semanticHash(afterContents);
   if (semanticBefore === semanticAfter) {
-    const commentsOnly =
-      stripComments(beforeContents) === stripComments(afterContents);
+    const commentsOnly = stripComments(beforeContents) === stripComments(afterContents);
     return commentsOnly ? "comment-only" : "formatting-only";
   }
   return "semantic";

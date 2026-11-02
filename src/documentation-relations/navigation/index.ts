@@ -1,2 +1,1 @@
-export { buildNavigation } from "./builder.js";
-export type { NavigationBuilderOptions } from "./builder.js";
+export * from "./builder.js";

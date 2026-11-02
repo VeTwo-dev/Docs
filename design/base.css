@@ -1,0 +1,207 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VeTwo Base Styles
+   ─────────────────────────────────────────────────────────────────────
+   Document baseline shared by both render targets. Global element
+   defaults are intentionally scoped with `:where()` (zero specificity)
+   so component CSS and Fumadocs utilities always win.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Reserve the scrollbar lane so page layout never shifts between
+     short and long documents. */
+  scrollbar-gutter: stable;
+  text-underline-offset: 3px;
+}
+
+body {
+  margin: 0;
+  background: var(--vetwo-bg);
+  color: var(--vetwo-fg);
+  font-family: var(--vetwo-font-body);
+  font-size: var(--vetwo-size-article);
+  line-height: var(--vetwo-leading-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Cinematic depth: one very faint accent glow at the top of the page.
+   Decoration is kept below perception threshold — only the dark scheme
+   carries it; the light scheme stays pure paper. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.dark body::before {
+  background: radial-gradient(
+    60rem 24rem at 70% -10%,
+    color-mix(in srgb, var(--vetwo-accent) 6%, transparent),
+    transparent 70%
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.dark) body::before {
+    background: radial-gradient(
+      60rem 24rem at 70% -10%,
+      color-mix(in srgb, var(--vetwo-accent) 6%, transparent),
+      transparent 70%
+    );
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--vetwo-fg);
+  font-family: var(--vetwo-font-heading);
+  line-height: var(--vetwo-leading-tight);
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--vetwo-accent);
+  text-decoration: none;
+  transition: color var(--vetwo-dur-fast) var(--vetwo-ease);
+}
+
+a:hover {
+  color: var(--vetwo-accent-strong);
+  text-decoration: underline;
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--vetwo-font-code);
+}
+
+pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+kbd {
+  display: inline-block;
+  padding: 0.05em 0.4em;
+  border: 1px solid var(--vetwo-border-strong);
+  border-bottom-width: 2px;
+  border-radius: calc(var(--vetwo-radius-small) - 1px);
+  background: var(--vetwo-surface);
+  color: var(--vetwo-fg);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+img,
+video,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+:where(.vetwo-doc-article, .vetwo-article) {
+  font-size: var(--vetwo-size-article);
+}
+
+:where(.vetwo-doc-article h1, .vetwo-article h1) {
+  font-size: clamp(1.75rem, 4vw, 2.1rem);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+:where(.vetwo-doc-article h2, .vetwo-article h2) {
+  font-size: 1.45rem;
+  letter-spacing: -0.015em;
+}
+
+:where(.vetwo-doc-article h3, .vetwo-article h3) {
+  font-size: 1.16rem;
+  letter-spacing: -0.01em;
+}
+
+:where(.vetwo-doc-article h4, .vetwo-article h4) {
+  font-size: 1rem;
+}
+
+:where(button, input, select, textarea, summary) {
+  font: inherit;
+}
+
+/* ── Focus: one consistent ring, accent-tinted ─────────────────────── */
+:focus {
+  outline-color: var(--vetwo-accent);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--vetwo-accent);
+  outline-offset: 2px;
+  border-radius: var(--vetwo-radius-small);
+}
+
+html:focus-within {
+  scroll-behavior: smooth;
+}
+
+/* ── Selection: accent-dim wash keeps text readable in both schemes ── */
+::selection {
+  background: var(--vetwo-accent-dim);
+  color: inherit;
+}
+
+/* ── Scrollbars: thin, quiet, theme-aware ──────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--vetwo-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--vetwo-border-strong);
+  border-radius: var(--vetwo-radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── Anchored headings account for the sticky header ───────────────── */
+:where(h1, h2, h3, h4, h5, h6)[id] {
+  scroll-margin-top: calc(var(--vetwo-header-h) + var(--vetwo-space-4));
+}
+
+/* ── Motion: honor reduced-motion first (kill switch), then ease ────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

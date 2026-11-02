@@ -1,2 +1,1 @@
-export { scoreExample } from "./scorer.js";
-export type { ExampleScore, ScoreFactor } from "./scorer.js";
+export * from "./scorer.js";

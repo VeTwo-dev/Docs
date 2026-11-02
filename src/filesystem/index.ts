@@ -1,4 +1,4 @@
-import { resolve, relative, dirname, basename, extname } from "node:path";
+import { resolve, relative, dirname, basename, extname, isAbsolute } from "node:path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import fg from "fast-glob";
 
@@ -250,4 +250,23 @@ export function generateId(filePath: string, rootDir: string): string {
   const name = getFileName(rel);
   const dir = dirname(rel);
   return dir === "." ? name : `${dir}/${name}`;
+}
+
+/**
+ * Authoritative output/request containment check: whether `candidatePath`
+ * resolves inside `rootDir`. Lexical only (no filesystem access, so missing
+ * files are fine); both inputs may be relative or absolute.
+ *
+ * Unlike a `startsWith` string comparison, this cannot be fooled by sibling
+ * directories that share a name prefix (`/srv/outside` vs `/srv/out`), and
+ * it rejects cross-drive absolute paths. Use it anywhere a user-influenced
+ * path must stay inside a configured root (static servers, output guards).
+ *
+ * @param rootDir - The containing directory.
+ * @param candidatePath - The path to test.
+ * @returns True when the candidate is the root itself or nested below it.
+ */
+export function isPathWithinRoot(rootDir: string, candidatePath: string): boolean {
+  const rel = relative(resolve(rootDir), resolve(candidatePath));
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }

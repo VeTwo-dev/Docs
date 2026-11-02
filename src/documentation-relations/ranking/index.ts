@@ -1,1 +1,1 @@
-export { rankRelationships, rankRelatedPages } from "./ranking.js";
+export * from "./ranking.js";

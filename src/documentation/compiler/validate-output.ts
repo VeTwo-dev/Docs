@@ -57,7 +57,13 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
   // ── Boundaries ────────────────────────────────────────────────────
   if (existsSync(nextDir)) {
     for (const f of listFilesRecursive(nextDir)) {
-      if (f.startsWith("content/") || f === "index.html" || f.startsWith("api/") || f.startsWith("md/") || f.startsWith("static/")) {
+      if (
+        f.startsWith("content/") ||
+        f === "index.html" ||
+        f.startsWith("api/") ||
+        f.startsWith("md/") ||
+        f.startsWith("static/")
+      ) {
         errors.push(`next/ boundary leak: ${f}`);
       }
     }
@@ -74,7 +80,12 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
   }
   if (existsSync(staticDir)) {
     for (const f of listFilesRecursive(staticDir)) {
-      if (f.startsWith("next/") || f.startsWith("md/") || f.startsWith("app/") || f.endsWith(".tsx")) {
+      if (
+        f.startsWith("next/") ||
+        f.startsWith("md/") ||
+        f.startsWith("app/") ||
+        f.endsWith(".tsx")
+      ) {
         errors.push(`static/ boundary leak: ${f}`);
       }
       if (f.includes("..")) errors.push(`static/ escaping path: ${f}`);
@@ -85,7 +96,8 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
   const manifestPath = join(outDir, "manifest.json");
   let manifestPages: Array<{ slug: string; title: string }> = [];
   if (existsSync(manifestPath)) {
-    const manifest = readJson(manifestPath) as { pages?: Array<{ slug: string; title: string }> } | undefined;
+    const manifest = readJson(manifestPath) as
+      { pages?: Array<{ slug: string; title: string }> } | undefined;
     if (manifest?.pages === undefined) {
       errors.push("manifest.json is not valid JSON with a pages array");
     } else {
@@ -98,24 +110,41 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
 
   // ── Next.js structure ─────────────────────────────────────────────
   if (existsSync(nextDir)) {
-    for (const required of ["package.json", "app/layout.tsx", "app/page.tsx", "app/docs/[[...slug]]/page.tsx", "components/block-renderer.tsx", "app/globals.css"]) {
+    for (const required of [
+      "package.json",
+      "app/layout.tsx",
+      "app/page.tsx",
+      "app/docs/[[...slug]]/page.tsx",
+      "components/block-renderer.tsx",
+      "app/globals.css",
+    ]) {
       if (!existsSync(join(nextDir, required))) {
         // Legacy single-segment route is a known-broken shape.
-        if (required === "app/docs/[[...slug]]/page.tsx" && existsSync(join(nextDir, "app/docs/[slug]/page.tsx"))) {
-          errors.push("next/: legacy app/docs/[slug]/page.tsx cannot serve nested slugs (need [[...slug]])");
+        if (
+          required === "app/docs/[[...slug]]/page.tsx" &&
+          existsSync(join(nextDir, "app/docs/[slug]/page.tsx"))
+        ) {
+          errors.push(
+            "next/: legacy app/docs/[slug]/page.tsx cannot serve nested slugs (need [[...slug]])",
+          );
         } else {
           errors.push(`next/: missing ${required}`);
         }
       }
     }
-    const layout = existsSync(join(nextDir, "app/layout.tsx")) ? readFileSync(join(nextDir, "app/layout.tsx"), "utf8") : "";
+    const layout = existsSync(join(nextDir, "app/layout.tsx"))
+      ? readFileSync(join(nextDir, "app/layout.tsx"), "utf8")
+      : "";
     if (layout.length > 0 && !layout.includes("globals.css")) {
       errors.push("next/: app/layout.tsx does not import globals.css");
     }
-    const pkg = readJson(join(nextDir, "package.json")) as { dependencies?: Record<string, string> } | undefined;
+    const pkg = readJson(join(nextDir, "package.json")) as
+      { dependencies?: Record<string, string> } | undefined;
     if (pkg === undefined) errors.push("next/: package.json is not valid JSON");
     // Home redirect target must exist.
-    const home = existsSync(join(nextDir, "app/page.tsx")) ? readFileSync(join(nextDir, "app/page.tsx"), "utf8") : "";
+    const home = existsSync(join(nextDir, "app/page.tsx"))
+      ? readFileSync(join(nextDir, "app/page.tsx"), "utf8")
+      : "";
     const redirect = /redirect\((.*?)\)/.exec(home)?.[1];
     if (redirect !== undefined) {
       try {
@@ -136,8 +165,10 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
   if (existsSync(mdDir)) {
     const mdFiles = listFilesRecursive(mdDir);
     for (const slug of manifestPages.map((p) => p.slug)) {
-      if (!mdFiles.includes(`${slug}.mdx`) && !mdFiles.includes("index.mdx")) {
-        errors.push(`md/: missing ${slug}.mdx`);
+      const hasPage = mdFiles.includes(`${slug}.mdx`) || mdFiles.includes(`${slug}.md`);
+      const hasIndex = mdFiles.includes("index.mdx") || mdFiles.includes("index.md");
+      if (!hasPage && !hasIndex) {
+        errors.push(`md/: missing ${slug}.md(x)`);
       }
     }
     // Frontmatter sanity on a sample (skip the generated ownership header).
@@ -155,7 +186,8 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
   // ── Static ────────────────────────────────────────────────────────
   if (existsSync(staticDir)) {
     if (!existsSync(join(staticDir, "index.html"))) errors.push("static/: index.html missing");
-    if (!existsSync(join(staticDir, "assets/css/globals.css"))) errors.push("static/: assets/css/globals.css missing");
+    if (!existsSync(join(staticDir, "assets/css/globals.css")))
+      errors.push("static/: assets/css/globals.css missing");
     const htmlFiles = listFilesRecursive(staticDir).filter((f) => f.endsWith(".html"));
     routes = htmlFiles.length;
     // Every manifest page must have a static HTML file.
@@ -176,7 +208,8 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
   // ── Search ────────────────────────────────────────────────────────
   const searchPath = join(outDir, "search-index.json");
   if (existsSync(searchPath)) {
-    const search = readJson(searchPath) as { entries?: Array<{ id: string; url: string }> } | undefined;
+    const search = readJson(searchPath) as
+      { entries?: Array<{ id: string; url: string }> } | undefined;
     if (search?.entries === undefined) {
       errors.push("search-index.json is not valid JSON with entries");
     } else {
@@ -193,7 +226,9 @@ export function validateWorkspace(_rootDir: string, outDir: string): WorkspaceVa
   }
 
   // ── Assets ────────────────────────────────────────────────────────
-  const assetDirs = [join(staticDir, "assets"), join(nextDir, "public/assets")].filter((d) => existsSync(d));
+  const assetDirs = [join(staticDir, "assets"), join(nextDir, "public/assets")].filter((d) =>
+    existsSync(d),
+  );
   for (const dir of assetDirs) {
     assets += listFilesRecursive(dir).length;
   }

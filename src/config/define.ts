@@ -22,6 +22,7 @@ export const DEFAULT_OUTPUT_LAYOUT: OutputLayoutConfig = {
     next: true,
     markdown: true,
     static: true,
+    site: true,
   },
 };
 
@@ -73,6 +74,7 @@ const DEFAULT_CONFIG: DocsConfig = {
     tocDepth: 3,
     syntaxHighlighting: true,
     mdx: false,
+    extension: ".mdx",
     smartypants: false,
     raw: false,
     document: false,
@@ -102,6 +104,9 @@ const DEFAULT_CONFIG: DocsConfig = {
     excludePages: [],
   },
   components: {},
+  content: {
+    pipeline: "canonical",
+  },
 };
 
 const ARRAY_KEYS: readonly string[] = [

@@ -21,5 +21,5 @@ export interface ConfigService {
 export const CONFIG_SERVICE = "config";
 
 export const configServiceFactory: ServiceFactory<ConfigService> = () => ({
-  load: (rootDir) => loadConfig(rootDir),
+  load: (rootDir, configPath) => loadConfig(rootDir, configPath),
 });

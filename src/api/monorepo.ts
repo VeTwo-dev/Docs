@@ -22,7 +22,10 @@ export function discoverWorkspaces(rootDir: string): WorkspacePackage[] {
   const pkgPath = join(rootDir, "package.json");
   if (!existsSync(pkgPath)) return [];
   try {
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { workspaces?: string[] | { packages?: string[] }; name?: string };
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+      workspaces?: string[] | { packages?: string[] };
+      name?: string;
+    };
     const patterns: string[] = Array.isArray(pkg.workspaces)
       ? pkg.workspaces
       : (pkg.workspaces?.packages ?? []);
@@ -52,7 +55,12 @@ export async function analyzeMonorepo(
     try {
       const res = await analyzeAPIs(opts);
       for (const s of res.symbols) {
-        all.push({ ...s, qualifiedName: s.qualifiedName.includes("/") ? s.qualifiedName : `${pkg.name}/${s.qualifiedName}` } as ApiSymbol);
+        all.push({
+          ...s,
+          qualifiedName: s.qualifiedName.includes("/")
+            ? s.qualifiedName
+            : `${pkg.name}/${s.qualifiedName}`,
+        } as ApiSymbol);
       }
     } catch {
       // Missing tsconfig or no TS files — skip package

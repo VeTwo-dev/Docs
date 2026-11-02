@@ -18,6 +18,7 @@ export interface PlannerTemplates {
   readonly plansReadme: string;
   readonly markdownReadme: string;
   readonly staticReadme: string;
+  readonly designSources: readonly ScaffoldFile[];
   readonly nextScaffold: readonly ScaffoldFile[];
 }
 
@@ -157,6 +158,29 @@ export function buildInitPlan(input: PlannerInput): readonly PlanAction[] {
     if (!fs.exists(relPath(`${agentDir}/plans/README.md`))) {
       add(`${agentDir}/plans/README.md`, "create", "file", {
         template: templates.plansReadme,
+        ownershipOverride: GENERATED_OWNERSHIP,
+      });
+    }
+  }
+
+  // ── 2b. Design sources ─────────────────────────────────────────────────
+  // Persistent design kit (design/): create-missing-only. Files that exist
+  // are user-owned design sources and are explicitly skipped — init never
+  // regenerates or overwrites them, and never prompts about them.
+  const design = templates.designSources;
+  if (
+    design.length > 0 &&
+    !fs.exists(relPath("design")) &&
+    design.some(([file]) => !fs.exists(relPath(file)))
+  ) {
+    add("design", "create", "directory");
+  }
+  for (const [file, content] of design) {
+    if (fs.exists(relPath(file))) {
+      add(file, "skip", "file");
+    } else {
+      add(file, "create", "file", {
+        template: content,
         ownershipOverride: GENERATED_OWNERSHIP,
       });
     }

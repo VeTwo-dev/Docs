@@ -93,10 +93,7 @@ export {
 export { lintContent, KNOWN_CODE_LANGUAGES, slugifyHeading } from "./lint.js";
 
 // ─── Safe regeneration pipeline ──────────────────────────────────────────
-export type {
-  ContentRegenerationOptions,
-  RegenerationResult,
-} from "./regenerate.js";
+export type { ContentRegenerationOptions, RegenerationResult } from "./regenerate.js";
 export { runContentRegeneration, serializeComposed } from "./regenerate.js";
 
 // ─── Health summary (dev mode) ───────────────────────────────────────────

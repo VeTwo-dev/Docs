@@ -44,6 +44,8 @@ export type {
   ApiAccess,
 } from "./models.js";
 export type { ApiGraph, ApiEdge, ApiEdgeKind } from "./graph.js";
+export { buildApiGraph } from "./graph.js";
+export { formatType, formatTypeConcise } from "./type-formatter.js";
 export * from "./diff.js";
 export * from "./baseline.js";
 export * from "./validate.js";
@@ -120,9 +122,7 @@ export async function analyzeProjectAPIs(
  * @param symbols - API symbols from the semantic analyzer.
  * @returns Array compatible with the `apis` field.
  */
-export function toCompilerApis(
-  symbols: readonly ApiSymbol[],
-): readonly {
+export function toCompilerApis(symbols: readonly ApiSymbol[]): readonly {
   readonly name: string;
   readonly kind: string;
   readonly signature?: string;

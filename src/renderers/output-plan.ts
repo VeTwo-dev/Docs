@@ -7,10 +7,14 @@
  * root; the plan only carries renderer-relative paths.
  */
 
-import type { DocumentationIR, IRPage } from "../documentation/compiler/ir.js";
+import type { DocumentationIR, IRBlock, IRPage } from "../documentation/compiler/ir.js";
+import type { SiteRoute } from "./types.js";
+import { mapBlockText, rewriteMarkdownLinks } from "../site/links.js";
+
+export { rewriteMarkdownLinks } from "../site/links.js";
 
 /** Renderer target ids (must match `RenderedSite["target"]`). */
-export type OutputTarget = "nextjs" | "markdown" | "static-html";
+export type OutputTarget = "nextjs" | "markdown" | "static-html" | "fumadocs";
 
 /** One planned documentation page with all renderer-relative addresses. */
 export interface PlannedPage {
@@ -22,7 +26,7 @@ export interface PlannedPage {
   readonly sectionTitle: string;
   /** Canonical Next.js route (e.g. `/docs/api/overview`). */
   readonly route: string;
-  /** Path inside `md/` (e.g. `api/overview.mdx`), POSIX. */
+  /** Path inside `md/` (e.g. `api/overview.md` or `api/overview.mdx`), POSIX. */
   readonly mdPath: string;
   /** Path inside `static/` (e.g. `api/overview/index.html`), POSIX. */
   readonly staticPath: string;
@@ -52,6 +56,11 @@ export interface DocumentationOutputPlan {
 export interface OutputPlanOptions {
   readonly workspaceRoot: string;
   readonly docsBasePath?: string;
+  /**
+   * File extension for `md/` pages. Defaults to `".mdx"` (historical).
+   * Use `".md"` for plain-Markdown output (no JSX components).
+   */
+  readonly markdownExtension?: ".md" | ".mdx";
 }
 
 function splitSegments(slug: string): readonly string[] {
@@ -79,6 +88,7 @@ export function buildOutputPlan(
 
   const pages: PlannedPage[] = ordered.map((page) => {
     const segments = splitSegments(page.slug);
+    const ext = options.markdownExtension ?? ".mdx";
     return {
       id: page.slug,
       slug: page.slug,
@@ -87,7 +97,7 @@ export function buildOutputPlan(
       sectionId: page.sectionId,
       sectionTitle: sectionTitle.get(page.sectionId) ?? page.sectionId,
       route: `${base}/${page.slug}`,
-      mdPath: page.slug === "index" ? "index.mdx" : `${page.slug}.mdx`,
+      mdPath: page.slug === "index" ? `index${ext}` : `${page.slug}${ext}`,
       staticPath: `${page.slug}/index.html`,
       segments,
       page,
@@ -110,7 +120,14 @@ export function buildOutputPlan(
     .filter((s): s is string => s !== undefined && pagesBySlug.has(s));
   const homeSlug = navSlugs[0] ?? pages[0]?.slug;
 
-  return { workspaceRoot: options.workspaceRoot, docsBasePath: base, pages, pagesBySlug, navigation, homeSlug };
+  return {
+    workspaceRoot: options.workspaceRoot,
+    docsBasePath: base,
+    pages,
+    pagesBySlug,
+    navigation,
+    homeSlug,
+  };
 }
 
 function normalizeBase(basePath: string | undefined): string {
@@ -125,7 +142,7 @@ export type LinkRenderer = "next" | "markdown" | "static";
 /**
  * Resolve a canonical documentation link for a renderer.
  * - next: absolute route (`/docs/api/overview`)
- * - markdown: relative `.mdx` path from the source page (`../api/overview.mdx`)
+ * - markdown: relative markdown path from the source page (`../api/overview.md`)
  * - static: relative URL from the source page dir (`../api/overview/`)
  * Returns undefined when the target slug is not in the plan.
  */
@@ -149,7 +166,99 @@ export function resolveDocumentationLink(
   return relativePath(posixDir(source.staticPath), posixDir(target.staticPath)) + "/";
 }
 
-function posixDir(p: string): string {
+/** Renderers that resolve authored Markdown links into their own URL space. */
+export type ContentLinkRenderer = LinkRenderer | "fumadocs";
+
+const URL_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
+
+/** Normalize a POSIX path, collapsing `.` and `..` segments. */
+function normalizePosixPath(path: string): string {
+  const out: string[] = [];
+  for (const part of path.split("/")) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") {
+      if (out.length > 0) out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  return out.join("/");
+}
+
+/**
+ * Resolve an authored Markdown link to a renderer URL, or undefined when the
+ * link is external, an anchor, an asset, or does not target a planned page.
+ *
+ * Handles relative Markdown links (`../api/overview.md`, and `.../index.md`
+ * that maps to a section root) as well as root-absolute routes
+ * (`/api/overview`, optionally prefixed by the docs base path). Unresolvable
+ * links are left verbatim by the caller.
+ */
+export function resolveContentHref(
+  plan: DocumentationOutputPlan,
+  sourceSlug: string,
+  url: string,
+  renderer: ContentLinkRenderer,
+  fromDir?: string,
+): string | undefined {
+  if (url.length === 0) return undefined;
+  if (url.startsWith("#") || url.startsWith("//") || URL_SCHEME_RE.test(url)) return undefined;
+  const hashIndex = url.search(/[#?]/);
+  const path = hashIndex < 0 ? url : url.slice(0, hashIndex);
+  const suffix = hashIndex < 0 ? "" : url.slice(hashIndex);
+  if (path.length === 0) return undefined;
+
+  const source = plan.pagesBySlug.get(sourceSlug);
+  if (source === undefined) return undefined;
+
+  let slug: string;
+  if (path.startsWith("/")) {
+    slug = path.replace(/^\/+|\/+$/g, "");
+    const base = plan.docsBasePath.replace(/^\/+|\/+$/g, "");
+    if (base.length > 0 && (slug === base || slug.startsWith(`${base}/`))) {
+      slug = slug.slice(base.length).replace(/^\/+/, "");
+    }
+  } else {
+    if (!/\.mdx?$/i.test(path)) return undefined;
+    slug = normalizePosixPath(`${posixDir(source.mdPath)}/${path}`).replace(/\.mdx?$/i, "");
+  }
+  if (slug.endsWith("/index")) slug = slug.slice(0, -"/index".length);
+  if (slug.length === 0) return undefined;
+
+  const target = plan.pagesBySlug.get(slug);
+  if (target === undefined) return undefined;
+
+  if (renderer === "next") return `${target.route}${suffix}`;
+  if (renderer === "fumadocs") return `/${target.slug === "index" ? "" : target.slug}${suffix}`;
+  if (renderer === "markdown") {
+    if (source.slug === target.slug) return undefined;
+    return `${relativePath(posixDir(source.mdPath), target.mdPath)}${suffix}`;
+  }
+  // static: relative URL from the rendered output directory (which may differ
+  // from the source slug, e.g. the root `index.html` home alias) to the target.
+  const from = fromDir ?? posixDir(source.staticPath);
+  if (source.slug === target.slug && from === posixDir(target.staticPath)) return `./${suffix}`;
+  if (from === posixDir(target.staticPath)) return `./${suffix}`;
+  return `${relativePath(from, posixDir(target.staticPath))}/${suffix}`;
+}
+
+/**
+ * Rewrite every inline link in a block list into the renderer's URL space.
+ * Code, images, and non-text blocks are preserved verbatim.
+ */
+export function rewriteBlockLinks(
+  blocks: readonly IRBlock[],
+  plan: DocumentationOutputPlan,
+  sourceSlug: string,
+  renderer: ContentLinkRenderer,
+): readonly IRBlock[] {
+  return mapBlockText(blocks, (text) =>
+    rewriteMarkdownLinks(text, (url) => resolveContentHref(plan, sourceSlug, url, renderer)),
+  );
+}
+
+/** Directory portion of a POSIX path (`.` when there is none). */
+export function posixDir(p: string): string {
   const i = p.lastIndexOf("/");
   return i < 0 ? "." : p.slice(0, i);
 }
@@ -164,4 +273,46 @@ export function relativePath(fromDir: string, to: string): string {
   const up = from.length - common;
   const rel = [...Array<string>(up).fill(".."), ...parts.slice(common)];
   return rel.join("/") || ".";
+}
+
+/**
+ * Project plan pages to site routes. Shared by every renderer so route
+ * identity is derived in exactly one place.
+ */
+export function planRoutes(plan: DocumentationOutputPlan): SiteRoute[] {
+  return plan.pages.map((p) => ({
+    slug: p.slug,
+    route: p.route,
+    title: p.title,
+    sectionId: p.sectionId,
+    sectionTitle: p.sectionTitle,
+  }));
+}
+
+/** A resolved related-page target (renderer formats label/href from this). */
+export interface RelatedPageTarget {
+  readonly slug: string;
+  readonly title: string;
+  readonly kind?: string;
+}
+
+/**
+ * Resolve an IR page's `references` to known plan pages, deduplicated.
+ * Shared by renderers so related-link targets resolve identically;
+ * each renderer formats labels/hrefs for its own output.
+ */
+export function relatedPageTargets(
+  plan: DocumentationOutputPlan,
+  page: Pick<IRPage, "slug" | "references">,
+): RelatedPageTarget[] {
+  const seen = new Set<string>();
+  const targets: RelatedPageTarget[] = [];
+  for (const ref of page.references) {
+    if (ref.targetSlug === undefined || seen.has(ref.targetSlug)) continue;
+    const target = plan.pagesBySlug.get(ref.targetSlug);
+    if (target === undefined) continue;
+    seen.add(ref.targetSlug);
+    targets.push({ slug: target.slug, title: target.title, kind: ref.relationship });
+  }
+  return targets;
 }

@@ -16,25 +16,23 @@ export function serializeBlock(block: IRBlock): string {
       return `${level} ${block.text}`;
     }
     case "paragraph":
-      // JSDoc {@link Target} is not valid MDX (braces open expressions);
-      // render link targets as code spans (targets are preserved separately).
-      return block.text.replace(/\{@link\s+([^}|]+)(?:\|[^}]*)?\}/g, "`$1`");
+      return inlineMdx(block.text);
     case "code": {
       const title = block.title !== undefined ? ` title="${block.title}"` : "";
       return `\`\`\`${block.language}${title}\n${block.code}\n\`\`\``;
     }
     case "list": {
       const marker = block.ordered ? "1." : "-";
-      return block.items.map((item) => `${marker} ${item}`).join("\n");
+      return block.items.map((item) => `${marker} ${inlineMdx(item)}`).join("\n");
     }
     case "callout": {
       const label = calloutLabel(block.tone);
-      return `> **${label}** ${block.text}`;
+      return `> **${label}** ${inlineMdx(block.text)}`;
     }
     case "table": {
       const header = `| ${block.headers.join(" | ")} |`;
       const divider = `| ${block.headers.map(() => "---").join(" | ")} |`;
-      const rows = block.rows.map((row) => `| ${row.join(" | ")} |`);
+      const rows = block.rows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`);
       return [header, divider, ...rows].join("\n");
     }
     case "image": {
@@ -58,6 +56,23 @@ export function serializeBlock(block: IRBlock): string {
       return `<${safeComponent}${suffix} />`;
     }
   }
+}
+
+/**
+ * Escape angle brackets inside table cells. MDX parsers may read `<T>` as
+ * JSX even inside code spans in tables; entities render identically.
+ */
+function escapeTableCell(cell: string): string {
+  return cell.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Inline text safe for MDX bodies. JSDoc `{@link Target}` is not valid MDX
+ * (braces open expressions); render link targets as code spans (targets are
+ * preserved separately in links/references).
+ */
+function inlineMdx(text: string): string {
+  return text.replace(/\{@link\s+([^}|]+)(?:\|[^}]*)?\}/g, "`$1`");
 }
 
 function calloutLabel(tone: "note" | "warning" | "deprecated" | "tip"): string {

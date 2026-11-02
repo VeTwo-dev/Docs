@@ -1,10 +1,1 @@
-export {
-  diagnosticFile,
-  flattenMessageText,
-  mapDiagnosticCode,
-  mapDiagnosticSeverity,
-  normalizeCompilerDiagnostic,
-  normalizeCompilerDiagnostics,
-  toCompilerRange,
-  toOneBasedPosition,
-} from "./normalize.js";
+export * from "./normalize.js";

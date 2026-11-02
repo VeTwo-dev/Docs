@@ -1,4 +1,5 @@
 import type { DevServerConfig } from "./types.js";
+import { resolveDevOutputDir } from "./types.js";
 import { build } from "../engine/index.js";
 import { createLoggerSync } from "../logger/index.js";
 import { existsSync } from "node:fs";
@@ -6,6 +7,7 @@ import { watch } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname, resolve, normalize } from "node:path";
+import { isPathWithinRoot } from "../filesystem/index.js";
 import { createHash } from "node:crypto";
 import type { Duplex } from "node:stream";
 
@@ -34,7 +36,7 @@ type WsClient = IncomingMessage & { socket: Duplex };
  */
 export async function startDevServer(rootDir: string, config: DevServerConfig): Promise<void> {
   const logger = createLoggerSync();
-  const outputDir = join(rootDir, "docs");
+  const outputDir = resolveDevOutputDir(rootDir, config);
   const clients = new Set<WsClient>();
 
   logger.info("Starting development build...");
@@ -45,9 +47,11 @@ export async function startDevServer(rootDir: string, config: DevServerConfig): 
     const url = req.url ?? "/";
     let filePath = join(outputDir, url === "/" ? "index.html" : url);
 
-    // Security: validate resolved path stays within outputDir to prevent path traversal
+    // Security: the resolved path must stay within outputDir. A relative()
+    // check (not a string prefix) so sibling directories sharing a name
+    // prefix can never match.
     const resolvedPath = normalize(filePath);
-    if (!resolvedPath.startsWith(outputDir)) {
+    if (!isPathWithinRoot(outputDir, resolvedPath)) {
       res.writeHead(403, { "Content-Type": "text/plain" });
       res.end("Forbidden");
       return;
@@ -158,14 +162,18 @@ export async function startDevServer(rootDir: string, config: DevServerConfig): 
 
     if (config.open) {
       import("node:child_process")
-        .then(({ exec }) => {
+        .then(({ execFile }) => {
           const cmd =
             process.platform === "darwin"
               ? "open"
               : process.platform === "win32"
                 ? "start"
                 : "xdg-open";
-          exec(`${cmd} ${url}`);
+          // execFile with an argument array: the URL (built from host/port
+          // flags) never passes through a shell.
+          execFile(cmd, [url], (error) => {
+            if (error) logger.warn(`Could not open browser: ${error.message}`);
+          });
         })
         .catch(() => {
           // Browser open not available

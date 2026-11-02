@@ -89,12 +89,19 @@ const MarkdownConfigSchema = z
     tocDepth: z.number().min(1).max(6).optional(),
     syntaxHighlighting: z.boolean().optional(),
     mdx: z.boolean().optional(),
+    extension: z.enum([".md", ".mdx"]).optional(),
     smartypants: z.boolean().optional(),
     raw: z.boolean().optional(),
     document: z.boolean().optional(),
     lineHighlighting: z.boolean().optional(),
     diffHighlighting: z.boolean().optional(),
     focusRegions: z.boolean().optional(),
+  })
+  .passthrough();
+
+const ContentPipelineSchema = z
+  .object({
+    pipeline: z.enum(["legacy", "canonical"]).optional(),
   })
   .passthrough();
 
@@ -125,6 +132,7 @@ const OutputLayoutSchema = z
         next: z.boolean(),
         markdown: z.boolean(),
         static: z.boolean(),
+        site: z.boolean().optional(),
       })
       .optional(),
   })
@@ -196,6 +204,7 @@ export const DocsConfigSchema = z
     markdown: MarkdownConfigSchema.optional(),
     api: ApiConfigSchema.optional(),
     agent: AgentConfigSchema.optional(),
+    content: ContentPipelineSchema.optional(),
   })
   .passthrough();
 

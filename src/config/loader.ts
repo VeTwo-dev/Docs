@@ -78,18 +78,23 @@ export function findMonorepoRoot(startDir: string): string | undefined {
  * configuration from `package.json` under the `@vetwo/docs` key.
  *
  * @param rootDir - Absolute path to the project root directory.
+ * @param configPath - Optional explicit config file path (relative to `rootDir`
+ *   or absolute). When omitted, supported config files are discovered.
  * @returns The resolved configuration and the path to the file it was loaded from.
  *
  * @example
  * ```ts
  * const { config, filePath } = await loadConfig("/path/to/project");
+ * const alt = await loadConfig("/path/to/project", "./docs.static.config.ts");
  * ```
  */
-export async function loadConfig(rootDir: string): Promise<ConfigLoadResult> {
-  const configPath = findConfigFile(rootDir);
+export async function loadConfig(rootDir: string, configPath?: string): Promise<ConfigLoadResult> {
+  const explicit =
+    configPath !== undefined && configPath.length > 0 ? resolve(rootDir, configPath) : undefined;
+  const resolvedPath = explicit ?? findConfigFile(rootDir);
 
-  if (configPath) {
-    const mod = await import(configPath);
+  if (resolvedPath) {
+    const mod = await import(resolvedPath);
     const userConfig: DocsConfigInput = (mod.default ?? mod) as DocsConfigInput;
     validateConfig(userConfig);
     const warnings = validateConfigWarnings(userConfig);
@@ -97,7 +102,7 @@ export async function loadConfig(rootDir: string): Promise<ConfigLoadResult> {
       console.warn(`[docs] Warning: ${warning}`);
     }
     const config = defineDocs(userConfig);
-    return { config, filePath: configPath };
+    return { config, filePath: resolvedPath };
   }
 
   const packageJson = findPackageJson(rootDir);

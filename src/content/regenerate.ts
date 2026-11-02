@@ -10,7 +10,15 @@
  * `.vetwo/docs/conflicts/` for `docs content conflicts`.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { compileArchitecture } from "../documentation/compiler/orchestrator.js";
@@ -29,11 +37,7 @@ import {
   hashContent,
   planRegeneration,
 } from "./manifest.js";
-import type {
-  ContentOwnershipManifest,
-  OwnedFileEntry,
-  RegenerationPlan,
-} from "./manifest.js";
+import type { ContentOwnershipManifest, OwnedFileEntry, RegenerationPlan } from "./manifest.js";
 import { composePage } from "./composition/engine.js";
 import type { ContentLayer } from "./composition/engine.js";
 import type { AuthoredDocument } from "./types.js";
@@ -88,7 +92,12 @@ export function runContentRegeneration(options: ContentRegenerationOptions): Reg
   // ── 3. Compose each page ─────────────────────────────────────────────
   const conflicts: DocumentationDiagnostic[] = [];
   const composedFiles: { path: string; slug: string; contents: string }[] = [];
-  const candidates: { slug: string; path: string; desiredFingerprint: string; existsOnDisk: boolean }[] = [];
+  const candidates: {
+    slug: string;
+    path: string;
+    desiredFingerprint: string;
+    existsOnDisk: boolean;
+  }[] = [];
   const candidateFingerprints = new Map<string, string>();
 
   for (const [slug, layer] of generatedLayers) {
@@ -186,9 +195,7 @@ export function runContentRegeneration(options: ContentRegenerationOptions): Reg
     // instead of deleted — user work is never destroyed.
     for (const entry of plan.entries) {
       if (entry.action !== "delete") continue;
-      const path = Object.keys(manifest.files).find(
-        (p) => manifest.files[p]?.slug === entry.slug,
-      );
+      const path = Object.keys(manifest.files).find((p) => manifest.files[p]?.slug === entry.slug);
       if (path === undefined) continue;
       const abs = join(rootDir, path);
       try {
@@ -301,16 +308,18 @@ function loadAuthored(contentDir: string): Map<string, AuthoredDocument> {
 }
 
 /** Deterministic generated layers keyed by slug. */
-function generatedLayersOf(
-  architecture: DocumentationArchitecture,
-): Map<string, ContentLayer> {
+function generatedLayersOf(architecture: DocumentationArchitecture): Map<string, ContentLayer> {
   const layers = new Map<string, ContentLayer>();
   for (const page of architecture.pages) {
     // Reconstruct blocks from the architecture definition deterministically.
     const blocks: IRBlock[] = [
       { kind: "heading", level: 1, text: page.title },
       ...(page.summary.length > 0 ? [{ kind: "paragraph" as const, text: page.summary }] : []),
-      ...page.symbols.map((symbol) => ({ kind: "list" as const, ordered: false, items: [`\`${symbol}\``] })),
+      ...page.symbols.map((symbol) => ({
+        kind: "list" as const,
+        ordered: false,
+        items: [`\`${symbol}\``],
+      })),
     ];
     layers.set(page.slug, { ownership: "generated", title: page.title, blocks });
   }
@@ -318,10 +327,7 @@ function generatedLayersOf(
 }
 
 /** Minimal deterministic markdown serialization for composed pages. */
-export function serializeComposed(
-  title: string,
-  blocks: readonly { block: IRBlock }[],
-): string {
+export function serializeComposed(title: string, blocks: readonly { block: IRBlock }[]): string {
   const lines: string[] = ["---", `title: ${JSON.stringify(title)}`, "---", ""];
   for (const { block } of blocks) {
     switch (block.kind) {
@@ -350,9 +356,7 @@ export function serializeComposed(
         break;
       case "custom": {
         const props = Object.entries(block.props ?? {})
-          .map(([k, v]) =>
-            typeof v === "string" ? `${k}="${v}"` : `${k}={${JSON.stringify(v)}}`,
-          )
+          .map(([k, v]) => (typeof v === "string" ? `${k}="${v}"` : `${k}={${JSON.stringify(v)}}`))
           .join(" ");
         lines.push("", `<${block.component}${props.length > 0 ? ` ${props}` : ""} />`);
         break;

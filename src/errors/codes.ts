@@ -91,41 +91,91 @@ export const ERROR_DESCRIPTIONS: Record<ErrorCode, string> = {
  * Maps error codes to actionable steps the user can take.
  */
 export const ERROR_RECOVERY_SUGGESTIONS: Record<ErrorCode, readonly string[]> = {
-  [ErrorCode.CONFIG_INVALID]: ["Fix the configuration file and retry", "Run `docs doctor` for diagnostics"],
-  [ErrorCode.SOURCE_NOT_FOUND]: ["Check the `source` field in your config", "Ensure the source directory exists"],
+  [ErrorCode.CONFIG_INVALID]: [
+    "Fix the configuration file and retry",
+    "Run `docs doctor` for diagnostics",
+  ],
+  [ErrorCode.SOURCE_NOT_FOUND]: [
+    "Check the `source` field in your config",
+    "Ensure the source directory exists",
+  ],
   [ErrorCode.BUILD_FAILED]: ["Check the error details above", "Run `docs doctor` to diagnose"],
-  [ErrorCode.TYPESCRIPT_ERROR]: ["Fix the TypeScript error in your source code", "Check tsconfig.json"],
+  [ErrorCode.TYPESCRIPT_ERROR]: [
+    "Fix the TypeScript error in your source code",
+    "Check tsconfig.json",
+  ],
   [ErrorCode.MARKDOWN_ERROR]: ["Check the Markdown file for syntax errors"],
-  [ErrorCode.MARKDOWN_PARSE_ERROR]: ["Check the Markdown file for syntax errors", "Verify frontmatter format"],
+  [ErrorCode.MARKDOWN_PARSE_ERROR]: [
+    "Check the Markdown file for syntax errors",
+    "Verify frontmatter format",
+  ],
   [ErrorCode.PLUGIN_ERROR]: ["Check plugin configuration", "Try disabling the plugin"],
-  [ErrorCode.PLUGIN_NOT_FOUND]: ["Install the required plugin", "Check the plugin name in your config"],
+  [ErrorCode.PLUGIN_NOT_FOUND]: [
+    "Install the required plugin",
+    "Check the plugin name in your config",
+  ],
   [ErrorCode.THEME_ERROR]: ["Check theme configuration", "Try the default theme"],
-  [ErrorCode.THEME_NOT_FOUND]: ["Install the required theme", "Check the theme name in your config"],
+  [ErrorCode.THEME_NOT_FOUND]: [
+    "Install the required theme",
+    "Check the theme name in your config",
+  ],
   [ErrorCode.RENDER_ERROR]: ["Check the renderer output", "Run `docs doctor`"],
-  [ErrorCode.SEARCH_ERROR]: ["Search indexing will be skipped", "Check that the output directory is writable"],
-  [ErrorCode.SEARCH_INDEX_FAILED]: ["Search will fall back to MiniSearch", "Check disk space and permissions"],
-  [ErrorCode.PAGEFIND_FAILED]: ["Pagefind will be skipped", "Install pagefind: `npm install -D pagefind`"],
+  [ErrorCode.SEARCH_ERROR]: [
+    "Search indexing will be skipped",
+    "Check that the output directory is writable",
+  ],
+  [ErrorCode.SEARCH_INDEX_FAILED]: [
+    "Search will fall back to MiniSearch",
+    "Check disk space and permissions",
+  ],
+  [ErrorCode.PAGEFIND_FAILED]: [
+    "Pagefind will be skipped",
+    "Install pagefind: `npm install -D pagefind`",
+  ],
   [ErrorCode.CACHE_ERROR]: ["Run `docs clean --cache` to rebuild the cache"],
   [ErrorCode.CACHE_READ_FAILED]: ["Run `docs clean --cache` to rebuild the cache"],
   [ErrorCode.CACHE_WRITE_FAILED]: ["Check disk space and permissions", "Run `docs clean --cache`"],
   [ErrorCode.CACHE_CORRUPTED]: ["Run `docs clean --cache` to rebuild the cache"],
-  [ErrorCode.OUTPUT_ERROR]: ["Check the output directory permissions", "Run `docs clean` and retry"],
-  [ErrorCode.OUTPUT_WRITE_FAILED]: ["Check disk space and permissions", "Ensure the output directory is writable"],
-  [ErrorCode.SITEMAP_FAILED]: ["Sitemap generation will be skipped", "Check base URL configuration"],
+  [ErrorCode.OUTPUT_ERROR]: [
+    "Check the output directory permissions",
+    "Run `docs clean` and retry",
+  ],
+  [ErrorCode.OUTPUT_WRITE_FAILED]: [
+    "Check disk space and permissions",
+    "Ensure the output directory is writable",
+  ],
+  [ErrorCode.SITEMAP_FAILED]: [
+    "Sitemap generation will be skipped",
+    "Check base URL configuration",
+  ],
   [ErrorCode.RSS_FAILED]: ["RSS generation will be skipped", "Check RSS configuration"],
-  [ErrorCode.OG_IMAGE_FAILED]: ["OG image generation will be skipped", "Ensure satori and resvg are installed"],
+  [ErrorCode.OG_IMAGE_FAILED]: [
+    "OG image generation will be skipped",
+    "Ensure satori and resvg are installed",
+  ],
   [ErrorCode.TYPESDOC_FAILED]: ["API documentation will be skipped", "Check TypeDoc configuration"],
-  [ErrorCode.TYPESDOC_CONFIG_ERROR]: ["Fix the TypeDoc configuration", "Check api.source in your config"],
+  [ErrorCode.TYPESDOC_CONFIG_ERROR]: [
+    "Fix the TypeDoc configuration",
+    "Check api.source in your config",
+  ],
   [ErrorCode.DEVSERVER_ERROR]: ["Check the error details", "Restart the dev server"],
   [ErrorCode.CLI_INVALID_ARGS]: ["Check the command arguments", "Run `docs --help` for usage"],
   [ErrorCode.CLI_COMMAND_FAILED]: ["Check the error details", "Run `docs doctor`"],
-  [ErrorCode.INTERNAL_ERROR]: ["This is a bug — please report it at https://github.com/vetwo/docs/issues"],
+  [ErrorCode.INTERNAL_ERROR]: [
+    "This is a bug — please report it at https://github.com/vetwo/docs/issues",
+  ],
   [ErrorCode.INIT_FAILED]: ["Check file permissions", "Run `docs doctor` for diagnostics"],
   [ErrorCode.NETWORK_ERROR]: ["Check your internet connection", "Retry the operation"],
   [ErrorCode.CONFLICT]: ["Resolve the file conflicts", "Run `docs content conflicts` to inspect"],
   [ErrorCode.VALIDATION_FAILED]: ["Check the validation errors above", "Fix the reported issues"],
-  [ErrorCode.STATE_CORRUPTED]: ["Run `docs clean --state` to rebuild state", "Run `docs doctor` for diagnostics"],
-  [ErrorCode.INTERRUPTED]: ["Retry the operation", "Check if another process is using the state directory"],
+  [ErrorCode.STATE_CORRUPTED]: [
+    "Run `docs clean --state` to rebuild state",
+    "Run `docs doctor` for diagnostics",
+  ],
+  [ErrorCode.INTERRUPTED]: [
+    "Retry the operation",
+    "Check if another process is using the state directory",
+  ],
 };
 
 /**

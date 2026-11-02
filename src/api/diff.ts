@@ -7,7 +7,8 @@
 
 import type { ApiSymbol } from "./models.js";
 
-export type ApiChangeKind = "added" | "removed" | "signature-changed" | "deprecated-added" | "moved";
+export type ApiChangeKind =
+  "added" | "removed" | "signature-changed" | "deprecated-added" | "moved";
 export type ApiChangeSeverity = "breaking" | "non-breaking" | "additive";
 
 export interface ApiChange {
@@ -28,7 +29,8 @@ export interface ApiDiff {
 }
 
 function signatureOf(s: ApiSymbol): string {
-  const params = s.parameters?.map((p) => `${p.name}:${p.type}${p.required ? "" : "?"}`).join(",") ?? "";
+  const params =
+    s.parameters?.map((p) => `${p.name}:${p.type}${p.required ? "" : "?"}`).join(",") ?? "";
   return `${s.kind}:${s.name}(${params}):${s.returnType ?? "void"}`;
 }
 
@@ -40,13 +42,21 @@ export function diffApis(before: readonly ApiSymbol[], after: readonly ApiSymbol
   for (const [qn, b] of beforeByName) {
     const a = afterByName.get(qn);
     if (a === undefined) {
-      changes.push({ kind: "removed", severity: "breaking", symbolName: b.name, qualifiedName: qn, before: b, details: `Removed ${b.kind} ${qn}` });
+      changes.push({
+        kind: "removed",
+        severity: "breaking",
+        symbolName: b.name,
+        qualifiedName: qn,
+        before: b,
+        details: `Removed ${b.kind} ${qn}`,
+      });
       continue;
     }
     const sigBefore = signatureOf(b);
     const sigAfter = signatureOf(a);
     if (sigBefore !== sigAfter) {
-      const isBreaking = b.parameters?.length !== a.parameters?.length || b.returnType !== a.returnType;
+      const isBreaking =
+        b.parameters?.length !== a.parameters?.length || b.returnType !== a.returnType;
       changes.push({
         kind: "signature-changed",
         severity: isBreaking ? "breaking" : "non-breaking",
@@ -58,22 +68,48 @@ export function diffApis(before: readonly ApiSymbol[], after: readonly ApiSymbol
       });
     }
     if (b.deprecated === false && a.deprecated !== false) {
-      changes.push({ kind: "deprecated-added", severity: "non-breaking", symbolName: b.name, qualifiedName: qn, before: b, after: a, details: `Deprecated ${qn}` });
+      changes.push({
+        kind: "deprecated-added",
+        severity: "non-breaking",
+        symbolName: b.name,
+        qualifiedName: qn,
+        before: b,
+        after: a,
+        details: `Deprecated ${qn}`,
+      });
     }
     if (b.sourceFile !== a.sourceFile) {
-      changes.push({ kind: "moved", severity: "non-breaking", symbolName: b.name, qualifiedName: qn, before: b, after: a, details: `${b.sourceFile} → ${a.sourceFile}` });
+      changes.push({
+        kind: "moved",
+        severity: "non-breaking",
+        symbolName: b.name,
+        qualifiedName: qn,
+        before: b,
+        after: a,
+        details: `${b.sourceFile} → ${a.sourceFile}`,
+      });
     }
   }
 
   for (const [qn, a] of afterByName) {
     if (!beforeByName.has(qn)) {
-      changes.push({ kind: "added", severity: "additive", symbolName: a.name, qualifiedName: qn, after: a, details: `Added ${a.kind} ${qn}` });
+      changes.push({
+        kind: "added",
+        severity: "additive",
+        symbolName: a.name,
+        qualifiedName: qn,
+        after: a,
+        details: `Added ${a.kind} ${qn}`,
+      });
     }
   }
 
   const breaking = changes.filter((c) => c.severity === "breaking");
-  const summary = breaking.length > 0
-    ? `${breaking.length} breaking change(s), ${changes.length - breaking.length} non-breaking`
-    : changes.length === 0 ? "No API changes" : `${changes.length} non-breaking change(s)`;
+  const summary =
+    breaking.length > 0
+      ? `${breaking.length} breaking change(s), ${changes.length - breaking.length} non-breaking`
+      : changes.length === 0
+        ? "No API changes"
+        : `${changes.length} non-breaking change(s)`;
   return { changes, breaking, hasBreaking: breaking.length > 0, summary };
 }

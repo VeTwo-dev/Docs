@@ -1,2 +1,1 @@
-export { createRelationshipResolverRegistry } from "./registry.js";
-export type { RelationshipResolverRegistry } from "./registry.js";
+export * from "./registry.js";

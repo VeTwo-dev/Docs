@@ -15,6 +15,7 @@
  */
 
 import type { RenderedFile, RendererNavLink, RendererTheme } from "../types.js";
+import { tokensCssBody, vetwoDarkTokens, vetwoLightTokens } from "../tokens.js";
 
 /** GitHub mark used for repository links (inline SVG, no external asset). */
 export const GITHUB_ICON_SVG =
@@ -100,7 +101,8 @@ function packageJson(): string {
       scripts: {
         dev: "next dev",
         build: "next build",
-        start: "next start",
+        start: "npx serve@latest out",
+        preview: "npx serve@latest out",
       },
       dependencies: {
         next: "^16.2.10",
@@ -812,37 +814,14 @@ export type GeneratedPageData = {
 
 /** Generic CSS-variable theme. No framework classes. */
 function globalsCss(theme?: RendererTheme): string {
-  const colors = theme?.colors ?? {};
-  const fonts = theme?.fonts ?? {};
-  const bodyFont = fonts.body ?? 'system-ui, -apple-system, "Segoe UI", sans-serif';
-  const headingFont = fonts.heading ?? bodyFont;
-  const codeFont = fonts.code ?? "ui-monospace, SFMono-Regular, Menlo, monospace";
   return `:root {
-  --vetwo-bg: ${colors.background ?? "#ffffff"};
-  --vetwo-fg: ${colors.text ?? "#111827"};
-  --vetwo-muted: ${colors.muted ?? "#6b7280"};
-  --vetwo-border: #e5e7eb;
-  --vetwo-accent: ${colors.accent ?? colors.primary ?? "#2563eb"};
-  --vetwo-primary: ${colors.primary ?? "#2563eb"};
-  --vetwo-secondary: ${colors.secondary ?? "#7c3aed"};
-  --vetwo-surface: ${colors.surface ?? "#f9fafb"};
-  --vetwo-sidebar-bg: ${colors.surface ?? "#f9fafb"};
-  --vetwo-code-bg: #f3f4f6;
-  --vetwo-font-body: ${bodyFont};
-  --vetwo-font-heading: ${headingFont};
-  --vetwo-font-code: ${codeFont};
+${tokensCssBody(vetwoLightTokens(theme))}
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --vetwo-bg: #0b0f17;
-    --vetwo-fg: #e5e7eb;
-    --vetwo-muted: #9ca3af;
-    --vetwo-border: #1f2937;
-    --vetwo-accent: #60a5fa;
-    --vetwo-sidebar-bg: #0f1420;
-    --vetwo-code-bg: #111827;
+${tokensCssBody(vetwoDarkTokens())}
   }
 }
 
@@ -1157,6 +1136,25 @@ button:focus-visible, summary:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ─── Footer, search, base media ──────────────────────────────────────── */
+
+.vetwo-footer { border-top: 1px solid var(--vetwo-border); padding: 1.5rem 1.25rem 2.5rem; }
+.vetwo-footer p { max-width: 48rem; margin: 0 auto; color: var(--vetwo-muted); font-size: 0.85rem; }
+pre { overflow-x: auto; max-width: 100%; }
+img { max-width: 100%; height: auto; }
+.vetwo-search { display: grid; gap: 0.75rem; margin: 1rem 0 0; }
+.vetwo-search-label { font-weight: 700; }
+.vetwo-search-input { font: inherit; padding: 0.6rem 0.8rem; border: 1px solid var(--vetwo-border); border-radius: 8px; background: var(--vetwo-bg); color: var(--vetwo-fg); width: 100%; box-sizing: border-box; }
+.vetwo-search-hint { color: var(--vetwo-muted); font-size: 0.9rem; margin: 0; }
+.vetwo-search-status { color: var(--vetwo-muted); font-size: 0.9rem; min-height: 1.5em; }
+.vetwo-search-results { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 1rem; }
+.vetwo-search-results a { font-weight: 700; }
+.vetwo-search-results p { margin: 0.25rem 0 0; color: var(--vetwo-muted); }
+.vetwo-header-link:focus-visible, .vetwo-brand:focus-visible, .vetwo-search-input:focus-visible {
+  outline: 2px solid var(--vetwo-accent);
+  outline-offset: 2px;
 }
 `;
 }

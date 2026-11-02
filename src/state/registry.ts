@@ -42,17 +42,32 @@ export interface NamespaceDefinition {
  * `.vetwo/docs/plugins/<plugin-id>/` and AI providers under
  * `.vetwo/docs/ai/providers/<provider>/`. Only the `plugin:` and `ai:`
  * prefixes are hierarchical today; everything else maps 1:1.
+ *
+ * Every segment is sanitized: namespace ids may originate from provider or
+ * plugin names outside our control, so separators and dot-segments are
+ * neutralized and an id can never map outside the state root.
  */
 export function namespaceSegments(id: string): readonly string[] {
   if (id.startsWith("plugin:")) {
-    const name = id.slice("plugin:".length);
-    return ["plugins", name];
+    return ["plugins", sanitizeNamespaceSegment(id.slice("plugin:".length))];
   }
   if (id.startsWith("ai:")) {
-    const name = id.slice("ai:".length);
-    return ["ai", "providers", name];
+    return ["ai", "providers", sanitizeNamespaceSegment(id.slice("ai:".length))];
   }
-  return [id];
+  return [sanitizeNamespaceSegment(id)];
+}
+
+/**
+ * Neutralize path separators and dot-segments in one namespace id segment.
+ * `../../evil` becomes `evil`, `a/b` becomes `a-b`: deterministic,
+ * contained, and identity-preserving for ordinary names.
+ */
+function sanitizeNamespaceSegment(name: string): string {
+  const cleaned = name
+    .split(/[/\\]+/)
+    .filter((part) => part !== "" && part !== "." && part !== "..")
+    .join("-");
+  return cleaned.length > 0 ? cleaned : "unnamed";
 }
 
 /**

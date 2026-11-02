@@ -73,6 +73,36 @@ function findTsconfig(rootDir: string): string | undefined {
   return undefined;
 }
 
+/** Resolve explicit entry points (exact paths or globs) to absolute files. */
+async function resolveEntryPoints(
+  entryPoints: readonly string[],
+  rootDir: string,
+): Promise<string[]> {
+  const { existsSync } = await import("node:fs");
+  const { resolve, isAbsolute } = await import("node:path");
+  const expanded: string[] = [];
+  for (const entry of entryPoints) {
+    const abs = isAbsolute(entry) ? entry : resolve(rootDir, entry);
+    if (!/[*?[\]{}]/.test(entry)) {
+      if (existsSync(abs)) expanded.push(abs);
+      continue;
+    }
+    try {
+      const fg = await import("fast-glob");
+      const glob =
+        (fg as unknown as { globSync: (p: string[], o: unknown) => string[] }).globSync ??
+        (fg as unknown as { default: { globSync: (p: string[], o: unknown) => string[] } }).default
+          ?.globSync;
+      if (glob !== undefined) {
+        expanded.push(...glob([entry], { cwd: rootDir, absolute: true }).slice(0, 200));
+      }
+    } catch {
+      // Ignore unloadable glob engine; exact paths above still work.
+    }
+  }
+  return [...new Set(expanded)];
+}
+
 async function discoverFallbackFiles(rootDir: string, _ts: TS): Promise<string[]> {
   try {
     const fg = await import("fast-glob");
@@ -197,7 +227,11 @@ export async function analyzeAPIs(options: SemanticAnalyzerOptions): Promise<Api
       undefined,
     );
     const listed =
-      parsed.fileNames.length > 0 ? parsed.fileNames : await discoverFallbackFiles(rootDir, ts);
+      options.entryPoints !== undefined && options.entryPoints.length > 0
+        ? await resolveEntryPoints(options.entryPoints, rootDir)
+        : parsed.fileNames.length > 0
+          ? parsed.fileNames
+          : await discoverFallbackFiles(rootDir, ts);
     // tsconfig include patterns (or their **/* default) can match generated
     // output, build dirs and fixtures — never analyze those as source.
     const fileNames = listed.filter((f) => keepProgramFile(f, rootDir, options.exclude ?? []));
@@ -213,7 +247,11 @@ export async function analyzeAPIs(options: SemanticAnalyzerOptions): Promise<Api
       skipLibCheck: true,
       declaration: true,
     };
-    const fileNames = await discoverFallbackFiles(rootDir, ts);
+    const listed =
+      options.entryPoints !== undefined && options.entryPoints.length > 0
+        ? await resolveEntryPoints(options.entryPoints, rootDir)
+        : await discoverFallbackFiles(rootDir, ts);
+    const fileNames = listed.filter((f) => keepProgramFile(f, rootDir, options.exclude ?? []));
     program = ts.createProgram(fileNames, defaultOptions);
   }
 

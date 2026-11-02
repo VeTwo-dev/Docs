@@ -1,17 +1,34 @@
 /**
  * Markdown/MDX Renderer (Phase 22.2).
  *
- * Owns `md/` exclusively. Emits one deterministic `.mdx` file per planned
- * page with frontmatter, using the output plan for identity and relative
- * links. Never emits Next.js or static implementation files.
+ * Owns `md/` exclusively. Emits one deterministic `.md` (plain Markdown) or
+ * `.mdx` file per planned page with frontmatter, using the output plan for
+ * identity and relative links. Never emits Next.js or static files.
+ *
+ * `.md` mode degrades custom IR API blocks (`ApiSignature`,
+ * `ParameterTable`, …) to portable Markdown (headings, code, tables, lists)
+ * so the output contains no JSX. `.mdx` mode preserves the historical JSX
+ * custom-component serialization.
  */
 
-import type { DocumentationIR } from "../../documentation/compiler/ir.js";
+import type { DocumentationIR, IRBlock } from "../../documentation/compiler/ir.js";
 import type { RenderedFile, RenderedSite, SiteRenderer, SiteRendererOptions } from "../types.js";
 import { serializeBlocks } from "../mdx.js";
-import { buildOutputPlan, resolveDocumentationLink } from "../output-plan.js";
+import { renderCustomMarkdown } from "../api-markdown.js";
+import {
+  buildOutputPlan,
+  relatedPageTargets,
+  resolveDocumentationLink,
+  rewriteBlockLinks,
+} from "../output-plan.js";
 
-export type MarkdownRendererOptions = SiteRendererOptions;
+export interface MarkdownRendererOptions extends SiteRendererOptions {
+  /**
+   * File extension (and content flavor) for `md/` pages. Defaults to
+   * `".mdx"` (historical). Use `".md"` for plain-Markdown output.
+   */
+  readonly markdownExtension?: ".md" | ".mdx";
+}
 
 /**
  * Creates the Markdown/MDX site renderer (owns the md/ output root).
@@ -28,27 +45,50 @@ export function createMarkdownRenderer(): SiteRenderer<MarkdownRendererOptions> 
 }
 
 /**
+ * Serialize blocks to portable plain Markdown, routing custom IR API blocks
+ * through the shared API transform (headings, code, tables, lists — no JSX).
+ */
+export function toPlainMarkdown(blocks: readonly IRBlock[]): string {
+  return blocks
+    .map((block) => {
+      if (block.kind === "custom") {
+        return renderCustomMarkdown(
+          block.component,
+          (block.props ?? {}) as Record<string, unknown>,
+        );
+      }
+      return serializeBlocks([block]);
+    })
+    .filter((s) => s.trim().length > 0)
+    .join("\n\n");
+}
+
+/**
  * Renders the Documentation IR to Markdown/MDX files (one per planned page).
  *
  * @param ir - Compiled Documentation IR (sole content input).
- * @param options - Site name, description and docs base path.
+ * @param options - Site name, description, docs base path and md extension.
  * @returns Rendered site with md-relative file paths.
  */
 export function renderMarkdownSite(
   ir: DocumentationIR,
   options: MarkdownRendererOptions = {},
 ): RenderedSite {
-  const plan = buildOutputPlan(ir, { workspaceRoot: "", docsBasePath: options.docsBasePath });
+  const ext = options.markdownExtension ?? ".mdx";
+  const plain = ext === ".md";
+  const plan = buildOutputPlan(ir, {
+    workspaceRoot: "",
+    docsBasePath: options.docsBasePath,
+    markdownExtension: ext,
+  });
 
   const files: RenderedFile[] = plan.pages.map((planned) => {
     const page = planned.page;
     // Rewrite internal symbol cross-links is out of scope; resolve related-page links.
-    const related = page.references
-      .filter((ref) => ref.targetSlug !== undefined)
-      .flatMap((ref) => {
-        const href = resolveDocumentationLink(plan, page.slug, ref.targetSlug!, "markdown");
-        return href !== undefined ? [`- [${ref.targetSlug}](${href})`] : [];
-      });
+    const related = relatedPageTargets(plan, page).flatMap((target) => {
+      const href = resolveDocumentationLink(plan, page.slug, target.slug, "markdown");
+      return href !== undefined ? [`- [${target.slug}](${href})`] : [];
+    });
 
     const frontmatter =
       `---\n` +
@@ -74,7 +114,10 @@ export function renderMarkdownSite(
         blocks = blocks.slice(1);
       }
     }
-    const body = serializeBlocks(blocks);
+    // Resolve authored relative links to their planned `md/` counterparts
+    // (e.g. `../troubleshooting/index.md` → `../troubleshooting.md`).
+    const linked = rewriteBlockLinks(blocks, plan, page.slug, "markdown");
+    const body = plain ? toPlainMarkdown(linked) : serializeBlocks(linked);
     const relatedSection = related.length > 0 ? `\n\n## Related\n\n${related.join("\n")}\n` : "";
     return {
       path: planned.mdPath,
@@ -93,6 +136,10 @@ export function renderMarkdownSite(
       sectionTitle: p.sectionTitle,
     })),
     entrypoint:
-      plan.homeSlug !== undefined ? plan.pagesBySlug.get(plan.homeSlug)!.mdPath : "index.mdx",
+      plan.homeSlug !== undefined
+        ? plan.pagesBySlug.get(plan.homeSlug)!.mdPath
+        : ext === ".md"
+          ? "index.md"
+          : "index.mdx",
   };
 }

@@ -1,5 +1,11 @@
 /**
- * Next.js Documentation Renderer.
+ * Next.js Documentation Renderer (compatibility).
+ *
+ * Retained for the `docs render --target nextjs` CLI contract, the
+ * `layout.next` workspace output, the public renderer API, and generated
+ * template stability. New Next.js documentation sites should prefer the
+ * canonical Fumadocs renderer (`../fumadocs/renderer.js`), which is the
+ * single primary internal Next.js renderer.
  *
  * Transforms a Documentation IR into a complete Next.js (App Router)
  * documentation site. Pure: no filesystem, compiler, AI or source-code
@@ -8,7 +14,12 @@
 
 import { IR_SCHEMA_VERSION, type DocumentationIR } from "../../documentation/compiler/ir.js";
 import type { RenderedFile, RenderedSite, SiteRenderer, SiteRendererOptions } from "../types.js";
-import { buildOutputPlan } from "../output-plan.js";
+import {
+  buildOutputPlan,
+  planRoutes,
+  relatedPageTargets,
+  resolveDocumentationLink,
+} from "../output-plan.js";
 import { generateScaffold, generatedTypesFile } from "./scaffold.js";
 import type { GeneratedPageData } from "./scaffold.js";
 
@@ -32,13 +43,7 @@ export function renderNextJsSite(
   const siteName = options.siteName ?? "Documentation";
   // Single route authority: the canonical output plan (not a parallel derivation).
   const plan = buildOutputPlan(ir, { workspaceRoot: "", docsBasePath: options.docsBasePath });
-  const routes = plan.pages.map((p) => ({
-    slug: p.slug,
-    route: p.route,
-    title: p.title,
-    sectionId: p.sectionId,
-    sectionTitle: p.sectionTitle,
-  }));
+  const routes = planRoutes(plan);
 
   // Sidebar from the canonical plan navigation (already slug-validated).
   const routeBySlug = new Map(routes.map((r) => [r.slug, r]));
@@ -91,19 +96,17 @@ export function renderNextJsSite(
           };
         }),
         blocks: page.blocks as unknown as readonly Record<string, unknown>[],
-        related: page.references
-          .filter((ref) => ref.targetSlug !== undefined)
-          .flatMap((ref) => {
-            const targetRoute = routeBySlug.get(ref.targetSlug ?? "");
-            if (targetRoute === undefined) return [];
-            return [
-              {
-                label: targetRoute.title,
-                href: targetRoute.route,
-                kind: ref.relationship,
-              },
-            ];
-          }),
+        related: relatedPageTargets(plan, page).flatMap((target) => {
+          const href = resolveDocumentationLink(plan, page.slug, target.slug, "next");
+          if (href === undefined) return [];
+          return [
+            {
+              label: target.title,
+              href,
+              kind: target.kind,
+            },
+          ];
+        }),
       };
 
       // NOTE: Markdown/MDX output is owned by the Markdown renderer (`md/`),

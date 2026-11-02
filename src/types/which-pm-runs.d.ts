@@ -1,8 +1,4 @@
 declare module "which-pm-runs" {
-  interface PMInfo {
-    name: string;
-    version?: string;
-  }
-  function whichPMRuns(): PMInfo | undefined;
-  export { whichPMRuns };
+  /** Returns the package manager that invoked the current process, if detected. */
+  export function whichPMRuns(): { name: string; version: string } | undefined;
 }

@@ -4,22 +4,25 @@
 [![license](https://img.shields.io/npm/l/@vetwo/docs.svg)](https://github.com/vetwo/docs/blob/main/LICENSE)
 [![build status](https://img.shields.io/github/actions/workflow/status/vetwo/docs/ci.yml?branch=main)](https://github.com/vetwo/docs/actions)
 
-The easiest and most powerful documentation generator for JavaScript and TypeScript. Generate beautiful, performant documentation sites from Markdown, MDX, and your source code.
+The easiest and most powerful documentation generator for JavaScript and TypeScript. Generate documentation sites from your Markdown and MDX content — a Next.js + Fumadocs site as the primary target and portable static HTML as the secondary target.
+
+**Scope:** `@vetwo/docs` renders *authored content*. It is not a general-purpose source-code intelligence engine, API analyzer, CMS, or AI documentation generator. API inference from TypeScript sources remains available as an explicit opt-in legacy path (see [COMPATIBILITY.md](./COMPATIBILITY.md)).
 
 ## Features
 
-- **Zero-config setup** -- Get started with a single command; sensible defaults out of the box
-- **Markdown and MDX** -- Write content in Markdown with full MDX support for interactive components
-- **API documentation** -- Automatically generate API docs from your TypeScript source code and JSDoc comments
+- **Content-first** -- Your Markdown/MDX is the source of truth; nothing is invented when content is missing
+- **Two site targets** -- Next.js + Fumadocs project and dependency-free static HTML from one model
+- **Markdown and MDX** -- Frontmatter, GFM, code spans, images, assets, and MDX custom components
+- **Blog, search, navigation** -- Dated posts with synthesized listing, build-time search index, deterministic nav
+- **API documentation (legacy opt-in)** -- API reference from TypeScript sources via `content.pipeline: "legacy"`
+- **Owned, safe output** -- Generated-file manifest, stale-output reconciliation, user files never overwritten
 - **Built-in search** -- Full-text search index generated at build time with zero runtime dependencies
 - **Plugin system** -- Extend functionality with a lifecycle-based plugin architecture
-- **Syntax highlighting** -- Beautiful code blocks powered by Shiki with support for hundreds of languages
-- **SEO optimized** -- Automatic sitemap, robots.txt, Open Graph tags, and Twitter Card metadata
-- **RSS feed** -- Generate an RSS feed for your documentation changelog or blog
+- **Syntax highlighting** -- Beautiful code blocks with support for hundreds of languages
+- **SEO optimized** -- Sitemap, robots.txt, Open Graph tags, and Twitter Card metadata (pipeline artifacts)
 - **Table of contents** -- Automatic heading extraction and configurable depth
 - **Monorepo support** -- Detects and works with npm, pnpm, yarn, and Bun workspaces
 - **File watching** -- Rebuild on file changes during development
-- **Caching** -- Incremental builds with content-based caching
 - **TypeScript-first** -- Written in TypeScript with full type definitions
 
 ## Installation
@@ -46,7 +49,7 @@ bun add @vetwo/docs --dev
 npx docs init
 ```
 
-This creates a `docs.config.ts` with your project's name and description, and a `docs/index.md` file.
+This scaffolds a `docs.config.ts` and starter content. Preview the plan first with `npx docs init --dry-run`.
 
 ### 2. Edit the configuration
 
@@ -99,41 +102,47 @@ The documentation rebuilds automatically when you modify files in the source dir
 |---|---|---|---|
 | `title` | `string` | `"Documentation"` | The title of your documentation site |
 | `description` | `string` | `"Project documentation"` | Site description used in meta tags |
-| `source` | `string` | `"./src"` | Directory containing your Markdown files |
+| `source` | `string` | `"./src"` | Directory containing your Markdown files (set to `"./docs"` for content-first projects) |
 | `output` | `string` | `"./docs"` | Output directory for generated files |
-| `baseUrl` | `string` | `""` | Base URL for sitemap and canonical links |
+| `baseUrl` | `string` | `"/"` | Base URL for sitemap and canonical links |
 | `theme` | `string \| ThemeConfig` | `"default"` | Theme name or custom theme configuration |
 | `nav` | `NavConfig` | `undefined` | Top navigation bar configuration |
 | `sidebar` | `SidebarConfig` | `{ auto: true, groups: [], collapsed: false }` | Sidebar navigation configuration |
 | `seo` | `SeoConfig` | `{}` | SEO metadata configuration |
-| `search` | `SearchConfig` | `{ enabled: true, indexFields: ["title", "content"], maxResults: 10 }` | Search configuration |
-| `versioning` | `VersioningConfig` | `{ enabled: false, current: "", versions: [] }` | Documentation versioning |
+| `search` | `SearchConfig` | `{ enabled: true, engine: "minisearch", indexFields: ["title", "content", "category"], maxResults: 20 }` | Search configuration (`engine` is `"minisearch"` or `"pagefind"`) |
+| `versioning` | `VersioningConfig` | `{ enabled: false, current: "latest", versions: [] }` | Documentation versioning |
 | `sitemap` | `boolean` | `true` | Generate a sitemap.xml file |
 | `rss` | `boolean` | `false` | Generate an RSS feed |
 | `robots` | `boolean` | `true` | Generate a robots.txt file |
-| `watch` | `boolean` | `false` | Enable file watching |
-| `clean` | `boolean` | `true` | Clean output directory before building |
+| `og` | `boolean` | `true` | Open Graph images (pipeline artifact) |
+| `watch` | `boolean` | `false` | Reserved key: no runtime effect in 1.0.0 (use `docs watch`) |
+| `clean` | `boolean` | `true` | Reserved key: no runtime effect in 1.0.0 (use `docs clean`) |
 | `cache` | `boolean` | `true` | Enable build caching |
-| `ignore` | `string[]` | `["node_modules", "dist", "build", ".git"]` | Glob patterns to ignore |
-| `include` | `string[]` | `["*.md", "*.mdx"]` | Glob patterns to include |
-| `rehypePlugins` | `string[]` | `[]` | Rehype plugins to use |
-| `remarkPlugins` | `string[]` | `[]` | Remark plugins to use |
+| `ignore` | `string[]` | `["node_modules", "dist", "build", ".git", ".turbo", "coverage", ".vetwo", ...]` | Glob patterns to ignore |
+| `include` | `string[]` | `[]` | Reserved key: no runtime effect in 1.0.0 |
+| `rehypePlugins` | `string[]` | `[]` | Reserved key: no runtime effect in 1.0.0 |
+| `remarkPlugins` | `string[]` | `[]` | Reserved key: no runtime effect in 1.0.0 |
 | `plugins` | `Plugin[]` | `[]` | Plugins to register |
 | `markdown` | `MarkdownConfig` | `{ gfm: true, breaks: false, toc: true, tocDepth: 3, syntaxHighlighting: true }` | Markdown processing options |
-| `api` | `ApiConfig` | `{ enabled: false, source: "./src", include: [], exclude: [], readme: true }` | API documentation generation options |
+| `api` | `ApiConfig` | `{ enabled: false, source: "./src", include: [], exclude: [...test/spec/dts], readme: true }` | API documentation options (legacy opt-in; see [COMPATIBILITY.md](./COMPATIBILITY.md)) |
+| `content` | `ContentPipelineConfig` | `{ pipeline: "canonical" }` | Content pipeline: `"canonical"` builds from your Markdown/MDX (default, no source analysis); `"legacy"` opts into inference from TypeScript sources |
 
 ## CLI Commands
 
 | Command | Description |
 |---|---|
-| `docs init` | Safely bootstrap a documentation workspace and AI agent skill |
+| `docs init` | Safely bootstrap a documentation workspace (dry-run, non-interactive modes) |
 | `docs dev` | Start development server with live reload |
 | `docs watch` | Watch for file changes and rebuild |
 | `docs build` | Build documentation for production |
-| `docs generate` | Alias for `build` |
-| `docs clean` | Remove generated output and cache |
-| `docs doctor` | Run diagnostics on your documentation setup |
-| `docs upgrade` | Upgrade @vetwo/docs to the latest version |
+| `docs generate` | Alias for `build`, plus optional content regeneration (`--dry-run`, `--force`) |
+| `docs serve [dir]` | Serve built output over HTTP (no rebuild, no writes) |
+| `docs clean` | Remove generated output and regenerable state (`--dry-run` previews) |
+| `docs doctor` | Run diagnostics on your documentation setup (`--json` supported) |
+| `docs upgrade` | Check/install updates for `@vetwo/*` packages (`--check` for report only) |
+| `docs plugin`, `docs theme` | Manage plugins and themes |
+
+Full reference with flags, side effects, exit codes, and the analysis/content groups: [CLI.md](./CLI.md).
 
 ### Command Options
 
@@ -219,41 +228,18 @@ interface HookContext {
 
 ## Architecture
 
-@vetwo/docs follows a layered architecture with strict dependency direction:
-`CLI → Engine → Pipeline → Domain Layers → Utilities`. The engine exposes a
-clean lifecycle (`createDocsEngine()` → `initialize()` → `build()` →
-`dispose()`) backed by a lightweight service container.
+Authored Markdown/MDX flows through one canonical pipeline — discovery and normalization, the site model, the versioned Documentation IR, output planning, and target renderers — into owned, reconciled output. The engine (`createDocsEngine()` → `initialize()` → `build()` → `dispose()`) orchestrates the lifecycle. Details: [ARCHITECTURE.md](./ARCHITECTURE.md). Safety guarantees (ownership, containment, cleanup, process safety): [SAFETY.md](./SAFETY.md). Retained legacy behavior: [COMPATIBILITY.md](./COMPATIBILITY.md).
 
-The pipeline itself runs distinct stages:
+## Documentation map
 
-```
-init -> discover -> config -> load -> transform -> generate -> output -> done
-```
-
-1. **Discovery** -- Scans the source directory for Markdown files and detects project type (library, application, monorepo)
-2. **Configuration** -- Loads and resolves the configuration file
-3. **Loading** -- Parses Markdown files, extracts frontmatter, headings, and links
-4. **Transformation** -- Applies remark/rehype plugins and custom transformations
-5. **Generation** -- Generates search index, API docs, sitemap, RSS feed, and navigation
-6. **Output** -- Writes all generated files to the output directory
-
-### Key Modules
-
-| Module | Purpose |
-|---|---|
-| `src/engine/` | DocsEngine lifecycle, service container, `build()` entry |
-| `src/pipeline/` | Build context and pipeline orchestration |
-| `src/scanner/` | File and project discovery |
-| `src/config/` | Configuration loading and validation |
-| `src/features/` | Feature generators (search, API docs, SEO, RSS, navigation) |
-| `src/plugins/` | Plugin registry and built-in plugins |
-| `src/renderer/` | HTML output rendering |
-| `src/generator/`, `src/analyzer/` | Auto source-code documentation |
-| `src/cache/` | Build caching |
-| `src/logger/` | Logging utilities |
-
-Old module paths (`src/core/`, `src/discovery/`, `src/renderers/`,
-`src/templates/`) still resolve via re-export facades; see `MIGRATION.md`.
+- [HOW_WORKS.md](./HOW_WORKS.md) — developer and contributor guide: configuration, content authoring, plugins, themes, search, errors, testing.
+- [CLI.md](./CLI.md) — complete command reference with flags and exit codes.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — canonical pipeline, engine lifecycle, module responsibilities.
+- [SAFETY.md](./SAFETY.md) — ownership, reconciliation, path containment, process safety.
+- [COMPATIBILITY.md](./COMPATIBILITY.md) — retained legacy surfaces and open decisions.
+- [FAQ.md](./FAQ.md) — frequently asked questions and troubleshooting.
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, scripts, workflow.
+- [skills/docs-bootstrap/SKILL.md](./skills/docs-bootstrap/SKILL.md) — agent skill for bootstrapping docs in a new project.
 
 ## Contributing
 
@@ -268,6 +254,3 @@ Contributions are welcome. Please read the [Contributing Guide](./CONTRIBUTING.m
 ## License
 
 [MIT](./LICENSE) -- Copyright (c) vetwo contributors
-# Docs
-# Docs
-# Docs

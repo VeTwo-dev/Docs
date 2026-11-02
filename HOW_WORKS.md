@@ -10,48 +10,38 @@ Complete technical documentation for `@vetwo/docs`. Everything you need to under
 2. [Installation](#installation)
 3. [Configuration Reference](#configuration-reference)
 4. [CLI Commands](#cli-commands)
-5. [Automatic Source Documentation](#automatic-source-documentation)
-6. [Markdown Features](#markdown-features)
-7. [Plugin System](#plugin-system)
-8. [Built-in Plugins](#built-in-plugins)
-9. [Theme System](#theme-system)
-10. [React Integration](#react-integration)
-11. [Search](#search)
-12. [SEO & Sitemap](#seo--sitemap)
-13. [RSS Feed](#rss-feed)
-14. [Open Graph Images](#open-graph-images)
-15. [API Documentation](#api-documentation)
-16. [Navigation](#navigation)
-17. [Sidebar](#sidebar)
-18. [Caching](#caching)
-19. [Monorepo Support](#monorepo-support)
-20. [Error Handling](#error-handling)
-21. [Architecture](#architecture)
-22. [Project Structure](#project-structure)
-23. [Testing](#testing)
-24. [Contributing](#contributing)
+5. [Content-First Generation (Default)](#content-first-generation-default)
+6. [Legacy Source Inference (Opt-In)](#legacy-source-inference-opt-in)
+7. [Markdown Features](#markdown-features)
+8. [Plugin System](#plugin-system)
+9. [Built-in Plugins](#built-in-plugins)
+10. [Theme System](#theme-system)
+11. [React Integration](#react-integration)
+12. [Search](#search)
+13. [SEO & Sitemap](#seo--sitemap)
+14. [RSS Feed](#rss-feed)
+15. [Open Graph Images](#open-graph-images)
+16. [API Documentation (legacy opt-in)](#api-documentation-legacy-opt-in)
+17. [Navigation](#navigation)
+18. [Sidebar](#sidebar)
+19. [Caching](#caching)
+20. [Monorepo Support](#monorepo-support)
+21. [Error Handling](#error-handling)
+22. [Architecture](#architecture)
+23. [Project Structure](#project-structure)
+24. [Testing](#testing)
+25. [Contributing](#contributing)
 
 ---
 
 ## Project Overview
 
-`@vetwo/docs` is a documentation generator built on a **pipeline architecture** with 8 lifecycle stages:
+`@vetwo/docs` renders authored Markdown/MDX into documentation sites through one canonical pipeline — content discovery and normalization, the site model, the versioned Documentation IR, output planning, and target renderers — with manifest-tracked, reconciled output. The engine exposes a clean lifecycle (`createDocsEngine()` → `initialize()` → `build()` → `dispose()`).
 
-```
-init → discover → config → load → transform → generate → output → done
-```
-
-- **Plugin-first design** — core never knows implementation details
-- **Convention over configuration** — zero-config works
-- **TypeScript-first** — strict types, no `any`, full `.d.ts` exports
+- **Content-first design** — authored pages are the source of truth; nothing is invented
+- **Convention over configuration** — `docs init` scaffolds a working setup
+- **TypeScript-first** — strict types with full `.d.ts` exports
 - **Dual ESM/CJS** — nested `import`/`require` export conditions
-
-### Stats
-
-- **75** source files, **36** test files, **600** tests
-- **41** example projects
-- **60** documentation pages
-- ~17k lines of TypeScript
 
 ---
 
@@ -75,13 +65,27 @@ bun add @vetwo/docs --dev
 
 ```json
 {
-  ".": "Main entry (build pipeline, config, plugins)",
+  ".": "Main entry (defineDocs, build, config, plugins, scanners)",
   "./cli": "CLI entry point",
   "./config": "Configuration utilities",
   "./react": "React components",
+  "./api": "API analysis facade (legacy-compatible)",
+  "./intelligence": "Project knowledge (legacy-compatible)",
+  "./ai": "AI providers (legacy-compatible)",
+  "./incremental": "Change detection (legacy-compatible)",
+  "./documentation-compiler": "Inference pipeline (legacy-compatible)",
+  "./documentation-relations": "Relation graph (legacy-compatible)",
+  "./examples": "Example composition (legacy-compatible)",
+  "./languages": "Language adapters",
+  "./plugins": "Plugin system",
+  "./renderers": "Site renderer factories",
+  "./content": "Authored-content inspection",
+  "./state": "Engine state",
   "./package.json": "Package metadata"
 }
 ```
+
+The full export map (16 subpaths plus `./package.json`) is pinned by packaging tests; the legacy-marked entries are supported compatibility surfaces, not part of the default workflow — see [COMPATIBILITY.md](./COMPATIBILITY.md).
 
 ---
 
@@ -109,29 +113,30 @@ export default defineDocs({
 |---|---|---|---|
 | `title` | `string` | `"Documentation"` | Site title |
 | `description` | `string` | `"Project documentation"` | Site description for meta tags |
-| `source` | `string` | `"./src"` | Directory containing Markdown files |
-| `output` | `string` | `"./docs"` | Output directory |
-| `baseUrl` | `string` | `""` | Base URL for sitemap and canonical links |
+| `source` | `string` | `"./src"` | Directory containing Markdown files (use `"./docs"` for content-first projects) |
+| `output` | `string \| OutputLayoutConfig` | `"./docs"` | Output directory, or a workspace object (`directory` + `layout: { next, markdown, static, site }`) |
+| `baseUrl` | `string` | `"/"` | Base URL for sitemap and canonical links |
 | `theme` | `string \| ThemeConfig` | `"default"` | Theme name or custom config |
 | `nav` | `NavConfig` | `undefined` | Top navigation bar |
 | `sidebar` | `SidebarConfig` | `{ auto: true, groups: [], collapsed: false }` | Sidebar navigation |
 | `seo` | `SeoConfig` | `{}` | SEO metadata |
-| `search` | `SearchConfig` | `{ enabled: true, ... }` | Search configuration |
-| `versioning` | `VersioningConfig` | `{ enabled: false, ... }` | Version switching |
-| `sitemap` | `boolean` | `true` | Generate sitemap.xml |
-| `rss` | `boolean` | `false` | Generate RSS feed |
-| `robots` | `boolean` | `true` | Generate robots.txt |
-| `watch` | `boolean` | `false` | Enable file watching |
-| `clean` | `boolean` | `true` | Clean output before build |
+| `search` | `SearchConfig` | `{ enabled: true, engine: "minisearch", indexFields: ["title", "content", "category"], maxResults: 20 }` | Search configuration |
+| `versioning` | `VersioningConfig` | `{ enabled: false, current: "latest", versions: [] }` | Version switching |
+| `sitemap` | `boolean` | `true` | Sitemap artifact (legacy pipeline output) |
+| `rss` | `boolean` | `false` | RSS feed artifact (legacy pipeline output) |
+| `robots` | `boolean` | `true` | robots.txt artifact (legacy pipeline output) |
+| `og` | `boolean` | `true` | Open Graph image artifact |
+| `watch` | `boolean` | `false` | Reserved key: no runtime effect in 1.0.0 (use `docs watch`) |
+| `clean` | `boolean` | `true` | Reserved key: no runtime effect in 1.0.0 (use `docs clean`) |
 | `cache` | `boolean` | `true` | Enable build caching |
-| `ignore` | `string[]` | `["node_modules", "dist", ...]` | Glob patterns to ignore |
-| `include` | `string[]` | `["*.md", "*.mdx"]` | Glob patterns to include |
-| `rehypePlugins` | `string[]` | `[]` | Rehype plugins |
-| `remarkPlugins` | `string[]` | `[]` | Remark plugins |
+| `ignore` | `string[]` | `["node_modules", "dist", "build", ".git", ".turbo", "coverage", ".vetwo", ...]` | Glob patterns to ignore |
+| `include` | `string[]` | `[]` | Reserved key: no runtime effect in 1.0.0 (discovery uses extensions + `ignore`) |
+| `rehypePlugins` | `string[]` | `[]` | Reserved key: no runtime effect in 1.0.0 |
+| `remarkPlugins` | `string[]` | `[]` | Reserved key: no runtime effect in 1.0.0 |
 | `plugins` | `Plugin[]` | `[]` | Lifecycle plugins |
 | `markdown` | `MarkdownConfig` | `{ gfm: true, toc: true, ... }` | Markdown processing options |
-| `api` | `ApiConfig` | `{ enabled: false, ... }` | API documentation generation |
-| `generator` | `GeneratorConfigInput` | `undefined` | Source-code doc generation settings |
+| `api` | `ApiConfig` | `{ enabled: false, ... }` | API documentation options (legacy opt-in) |
+| `content` | `ContentPipelineConfig` | `{ pipeline: "canonical" }` | `"canonical"` renders authored Markdown/MDX (default); `"legacy"` opts into source inference |
 
 ### Markdown Config
 
@@ -150,40 +155,19 @@ markdown: {
 }
 ```
 
-### API Config
+### API Config (legacy opt-in)
 
 ```ts
 api: {
   enabled: true,
   source: "./src",
   include: ["**/*.ts"],
-  exclude: ["**/*.test.ts", "**/*.d.ts"],
+  exclude: ["**/*.test.*", "**/*.spec.*", "**/*.d.ts"],
   readme: true,
 }
 ```
 
-### Generator Config
-
-```ts
-generator: {
-  enabled: true,        // Enable auto-generation
-  mode: "hybrid",       // "hybrid" | "incremental" | "full"
-  output: "./generated-docs",
-  overwrite: false,
-  // Section toggles (all default to true):
-  api: true,
-  architecture: true,
-  guides: true,
-  configuration: true,
-  cli: true,
-  faq: true,
-  troubleshooting: true,
-  examples: true,
-  sidebar: true,
-  navigation: true,
-  search: true,
-}
-```
+Only read when `content.pipeline` is `"legacy"` (or by the `analyze`/`plan` tooling). See [COMPATIBILITY.md](./COMPATIBILITY.md).
 
 ### Sidebar Config
 
@@ -245,15 +229,19 @@ Builds documentation for production. Output goes to the `output` directory.
 
 | Flag | Description |
 |---|---|
-| `--clean` | Clean output dir before build |
+| `-c, --config <path>` | Path to config file |
+| `--json` | Emit machine-readable result (exit code 3 on failure) |
+
+A failed build exits nonzero — validation errors are never downgraded to warnings.
 
 ### `docs dev`
 
-Starts a local dev server with live reload. Rebuilds on file changes.
+Starts a local dev server with live reload. Rebuilds on file changes. Serves the configured output directory.
 
 | Flag | Description |
 |---|---|
-| `--port <number>` | Server port (default: 3000) |
+| `-p, --port <number>` | Server port (default: 3000; must be 1–65535) |
+| `-H, --host <name>` | Host to bind to (default: `localhost`) |
 | `--open` | Open browser on start |
 
 ### `docs watch`
@@ -262,28 +250,23 @@ Watches for file changes and rebuilds. Runs until manually stopped.
 
 ### `docs generate`
 
-Generates documentation pages from source code analysis (filesystem scanning, package.json parsing, config detection).
+Generates documentation. Without flags it behaves like `docs build`.
 
 | Flag | Description |
 |---|---|
-| `--clean` | Clean generated output first |
-| `--overwrite` | Overwrite existing generated files |
-| `--api-only` | Generate only API documentation |
-| `--examples-only` | Generate only examples and recipes |
-| `--changed` | Only regenerate changed files |
+| `--dry-run` | Plan safe content regeneration without writing files |
+| `--force` | Update manually-edited generated pages (never protected ones) |
 
-**What it analyzes:**
-- Source file structure and exports
-- package.json (scripts, dependencies, metadata)
-- Config files (TypeScript, ESLint, Prettier, etc.)
-- CI/CD setup (.github/workflows)
-- TypeScript, testing, Docker presence
-- Framework detection (React, Vue, Next.js, etc.)
-- Package manager detection
+### `docs serve [dir]`
 
-**Output:**
-- 8 documentation pages (overview, architecture, guides, configuration, CLI, FAQ, examples, troubleshooting)
-- 4 metadata files (sidebar, navigation, search index, API metadata)
+Serves an already-built directory over HTTP. Performs no build and no writes — the directory must already exist (run `docs build` first).
+
+| Flag | Default | Description |
+|---|---|---|
+| `-p, --port <number>` | `3000` | Port to listen on (must be 1–65535) |
+| `--host <name>` | `localhost` | Host to bind to |
+
+> The full command reference, including `clean`, `doctor`, `upgrade`, `plugin`, `theme`, and the analysis/content groups (`plan`, `analyze`, `content`, `ai`, `integrations`, …), lives in [CLI.md](./CLI.md).
 
 ### `docs clean`
 
@@ -303,60 +286,36 @@ Manages plugins — list installed, add, remove.
 
 ### `docs theme`
 
-Manages themes — list available, switch, preview.
+Manages themes: `list` shows built-in themes (`default`, `midnight`, `forest`) plus installed theme packages; `install <name>` installs one via the detected package manager. See [CLI.md](./CLI.md).
 
 ---
 
-## Automatic Source Documentation
+## Content-First Generation (Default)
 
-The `docs generate` command auto-generates documentation from your source code.
+With the default `content.pipeline: "canonical"`, `docs build` / `docs generate` render **only your authored Markdown/MDX**:
 
-### How It Works
+1. **Discover** — finds `*.md`/`*.mdx` under the configured `source` root (deterministic order; `node_modules`, `dist`, `build`, `.git`, `coverage`, `.vetwo`, `generated/` ignored)
+2. **Normalize** — frontmatter (`title`, `description`, `order`, `date`, `author`, `kind`) plus headings, links, assets, and code
+3. **Model** — routes, sections, one home page, blog posts with newest-first ordering, a synthesized `/blog` listing, navigation, search records
+4. **Render** — the enabled output targets (Next.js, Markdown, static, Fumadocs site)
+5. **Reconcile** — manifest inventory, stale-output cleanup, validation gate
 
-1. **Analyze** — Scans project root for package.json, source files, config files
-2. **Detect** — Identifies project type, framework, package manager, TypeScript presence
-3. **Generate** — Creates pages based on analysis results
-4. **Metadata** — Builds sidebar, navigation, search index from generated pages
-5. **Cache** — Stores results for incremental regeneration
+Missing content fails loudly: no pages, titles, dates, or API entries are ever invented. Frontmatter rules (title fallback chain, strict calendar dates, `search: false` opt-out) are documented in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-### Generated Pages
+## Legacy Source Inference (Opt-In)
 
-| Page | Content |
-|---|---|
-| `overview.mdx` | Project summary, scripts table, features |
-| `architecture.mdx` | Directory tree, source/config file counts |
-| `guides/getting-started.mdx` | Quick start guide with install commands |
-| `configuration.mdx` | Config files detected, TypeScript settings |
-| `cli.mdx` | Package scripts, CLI entry points |
-| `faq.mdx` | Package info, feature flags |
-| `examples.mdx` | Usage examples from public exports |
-| `troubleshooting.mdx` | Common issues, CI detection |
+Setting `content: { pipeline: "legacy" }` (plus `api.enabled: true` for API reference) restores the historical inference-driven flow — project-knowledge building, API symbol extraction, dependency classification, framework detection, and example composition feeding the same renderers. The `analyze`, `plan`, `render`, and `content` command groups always use this tooling explicitly. This surface is supported but frozen; see [COMPATIBILITY.md](./COMPATIBILITY.md). It is not part of the default workflow and this guide does not document it as current behavior.
 
 ### Programmatic API
 
 ```ts
-import { generateDocs } from "@vetwo/docs";
+import { build, defineDocs, createLogger } from "@vetwo/docs";
 
-const result = await generateDocs({
-  rootDir: "/path/to/project",
-  logger,
-  generatorConfig: { enabled: true, mode: "hybrid" },
-  clean: true,
-  overwrite: false,
-});
-
-console.log(result.stats.totalPages);     // 8
-console.log(result.stats.totalMetadata);  // 4
+const logger = createLogger();
+await build({ rootDir: "/path/to/project", logger });
 ```
 
-### Cache
-
-Generated files are cached in `.docs-cache/generator/`. The cache tracks:
-- File paths and content hashes
-- Generation timestamps
-- Skipped files (unchanged since last run)
-
-Use `--changed` flag for incremental regeneration.
+`defineDocs({...})` creates a frozen, fully-resolved configuration (single defaults boundary); `loadConfig(rootDir)` loads it from `docs.config.*` or the `package.json` `@vetwo/docs` key. Public types (`DocsConfig`, `DocsConfigInput`, `ThemeConfig`, `SearchConfig`, …) and the `intelligence`/`state` namespaces are exported from the package root and the documented subpaths (`@vetwo/docs/config`, `@vetwo/docs/api`, `@vetwo/docs/renderers`, …).
 
 ---
 
@@ -366,12 +325,16 @@ Use `--changed` flag for incremental regeneration.
 
 ```yaml
 ---
-title: Page Title
-description: Page description
-order: 1
-category: Getting Started
+title: Page Title        # default: first H1, else filename
+description: Page description  # default: first paragraph as plain text
+order: 1                # numeric page ordering within its section (default 0)
+date: 2026-02-01        # blog posts: strict YYYY-MM-DD (invalid dates rejected)
+author: Jane Doe        # optional byline passthrough
+search: false           # opt out of the search index for this page
 ---
 ```
+
+`blog/` pages also accept `kind: blog`; only the root `index.md` may be `kind: home` (exactly one home page).
 
 ### Syntax Highlighting
 
@@ -419,16 +382,12 @@ Markdown files support raw HTML when `markdown.raw: true` (default).
 
 ### MDX
 
-MDX files (`.mdx`) support React components directly:
+MDX files (`.mdx`) support custom components. Components must be declared in configuration (`components: { Name: "./path/to/module" }`) and can be checked with `docs content validate --components '<json>'`. The renderers natively understand API blocks (`ApiSignature`, `ParameterTable`, `TypeDisplay`, …); unknown components are preserved as MDX in `.mdx` output, degraded to headings/tables/code in plain `.md` output, and replaced with an HTML comment in static output.
 
 ```mdx
-import { Callout } from "@vetwo/docs/react";
-
 # My Page
 
-<Callout type="info">
-  This is an info callout.
-</Callout>
+<NewsletterSignup />
 ```
 
 ---
@@ -537,8 +496,9 @@ export default defineDocs({
       text: "#1f2937",
     },
     fonts: {
+      heading: "Inter, sans-serif",
       body: "Inter, sans-serif",
-      mono: "Fira Code, monospace",
+      code: "Fira Code, monospace",
     },
   },
 });
@@ -546,41 +506,33 @@ export default defineDocs({
 
 ### Dark Mode
 
-Themes support automatic dark mode via `prefers-color-scheme`. Built-in themes include dark variants.
+Every built-in theme ships a dark variant (`dark` colors alongside the light ones); `DocsLayout` and `ThemeToggle` accept `"light" | "dark" | "system"`.
 
 ---
 
 ## React Integration
 
 ```tsx
-import { Callout, CodeBlock, Tabs, Tab } from "@vetwo/docs/react";
+import { DocsLayout, MarkdownRenderer, TOC, SearchBox } from "@vetwo/docs/react";
 
-export default function MyPage() {
+export default function Page({ html, headings }: { html: string; headings: { level: number; id: string; text: string }[] }) {
   return (
-    <>
-      <Callout type="warning">
-        This is a warning.
-      </Callout>
-
-      <CodeBlock language="typescript" title="example.ts">
-        {`const x = 42;`}
-      </CodeBlock>
-
-      <Tabs>
-        <Tab label="npm">npm install foo</Tab>
-        <Tab label="pnpm">pnpm add foo</Tab>
-      </Tabs>
-    </>
+    <DocsLayout title="My Docs" theme="system">
+      <SearchBox />
+      <TOC headings={headings} />
+      <MarkdownRenderer content={html} />
+    </DocsLayout>
   );
 }
 ```
 
 ### Available Components
 
-- `Callout` — Alert boxes (info, warning, error, tip)
-- `CodeBlock` — Syntax-highlighted code with title, line numbers
-- `Tabs` / `Tab` — Tabbed content
-- Custom components via plugin system
+- `DocsLayout` — page shell (`title`, `description`, `nav`, `sidebar`, `theme: "light" | "dark" | "system"`)
+- `MarkdownRenderer` — renders pipeline HTML (`content`, `className?`)
+- `TOC` — table of contents from headings (`headings`, `maxDepth?`)
+- `ThemeToggle` — client-side light/dark button (`defaultTheme?`)
+- `SearchBox` — search input (`searchUrl?`)
 
 ---
 
@@ -601,8 +553,10 @@ search: {
 
 | Engine | Description |
 |---|---|
-| `minisearch` | In-memory search, fast, zero deps |
-| `pagefind` | Static search, smaller index, better ranking |
+| `minisearch` | Default; index recorded in `search-index.json` |
+| `pagefind` | Alternative engine value |
+
+The static target additionally ships a self-contained search page (`search/`) with vanilla-JS ranking over the generated records — no runtime dependencies. Exclude a page with `search: false` frontmatter.
 
 ---
 
@@ -648,21 +602,9 @@ Generates `og-image.png` with project title and description.
 
 ---
 
-## API Documentation
+## API Documentation (legacy opt-in)
 
-TypeDoc-powered API documentation:
-
-```ts
-api: {
-  enabled: true,
-  source: "./src",
-  include: ["**/*.ts"],
-  exclude: ["**/*.test.ts", "**/*.d.ts"],
-  readme: true,
-}
-```
-
-Extracts functions, classes, interfaces, types, and enums with JSDoc descriptions.
+API reference from TypeScript sources is available through the legacy pipeline (`content.pipeline: "legacy"` with `api.enabled: true`), which extracts functions, classes, interfaces, types, and enums with JSDoc descriptions. It is not part of the default content-first workflow. See [COMPATIBILITY.md](./COMPATIBILITY.md).
 
 ---
 
@@ -693,13 +635,13 @@ nav: {
 }
 ```
 
-Navigation metadata is saved to `navigation.json` in the output directory.
+Navigation metadata is derived from the canonical site model (sidebar tree, breadcrumbs, `meta.json` per content folder).
 
 ---
 
 ## Sidebar
 
-Sidebar items support both string paths and explicit objects:
+Sidebar groups contain explicit item objects:
 
 ```ts
 sidebar: {
@@ -709,33 +651,22 @@ sidebar: {
     {
       title: "Getting Started",
       items: [
-        "/introduction",                              // string → auto label
-        { label: "Setup", href: "/setup" },          // explicit object
-        { label: "Advanced", href: "/adv", badge: "New" },  // with badge
+        { label: "Introduction", href: "/introduction" },
+        { label: "Setup", href: "/setup" },
+        { label: "Advanced", href: "/adv", badge: "New" },
       ],
     },
   ],
 }
 ```
 
-String items auto-derive labels: `"/getting-started"` → `"Getting Started"`.
+Items support `label`, `href`, nested `items`, `collapsed`, and `badge`. With `auto: true` (the default), navigation is derived from the discovered page structure instead.
 
 ---
 
 ## Caching
 
-Build caching for faster incremental builds:
-
-```ts
-cache: true  // in config
-```
-
-Cache stored in `.docs-cache/`. Tracks:
-- Content hashes for each file
-- Last build timestamps
-- Dependency graph
-
-Cache is invalidated when source files change.
+Build caching (`cache: true` in config, the default) keeps compiler state under `.vetwo/docs/compiler/`. The historical `.docs-cache/` directory is legacy: `docs clean` still removes it when present, but new state is written to `.vetwo/docs/`.
 
 ---
 
@@ -751,7 +682,7 @@ Detects and works with:
 Package manager is auto-detected from lock files:
 - `pnpm-lock.yaml` → pnpm
 - `yarn.lock` → yarn
-- `bun.lock` / `bun.lockb` → bun
+- `bun.lockb` → bun
 - `package-lock.json` → npm
 
 ---
@@ -760,194 +691,91 @@ Package manager is auto-detected from lock files:
 
 ### Error Classes
 
-Specialized error hierarchy:
+Specialized error hierarchy rooted at `DocsError` (`src/errors/classes.ts`):
 
 | Class | Use Case |
 |---|---|
-| `DocsError` | Base class for all errors |
-| `ConfigError` | Configuration issues |
-| `ConfigNotFoundError` | Missing config file |
-| `ConfigInvalidError` | Invalid config schema |
-| `BuildError` | Build pipeline failures |
-| `FileError` | File system errors |
-| `FileNotFoundError` | Missing files |
-| `PermissionError` | Access denied |
-| `PluginError` | Plugin failures |
-| `PluginHookError` | Plugin hook errors |
-| `RendererError` | Rendering failures |
+| `DocsError` | Base class for all errors (carries `code` and optional `cause`) |
+| `ConfigurationError` | Configuration issues |
 | `ValidationError` | Validation errors |
+| `BuildError` | Build pipeline failures |
+| `PluginError` | Plugin failures |
+| `ThemeError` | Theme failures |
+| `RendererError` | Rendering failures |
+| `MarkdownError` | Markdown processing errors |
+| `SearchError` | Search failures (`PagefindError` for Pagefind) |
 | `TypeDocError` | TypeDoc integration errors |
-| `PagefindError` | Pagefind search errors |
+| `CacheError` | Cache failures |
+| `CliError` | CLI failures |
 | `InternalError` | Unexpected internal errors |
 
 ### Error Codes
 
-28 structured error codes for programmatic handling:
+35 structured `DOCS_*` error codes (`src/errors/codes.ts`) for programmatic handling, plus numeric CLI exit codes (`EXIT_CODES`: 0 success, 1 general, 2 configuration, 3 build, 4 internal, 5 conflict, 6 validation, 130 interrupted). Thrown `DocsError` instances carry the machine-readable code on `.code`:
 
 ```ts
-import { ErrorCode } from "@vetwo/docs";
-
-if (error.code === ErrorCode.CONFIG_NOT_FOUND) {
-  // Handle missing config
+try {
+  await build({ rootDir: ".", logger });
+} catch (error) {
+  if (error instanceof Error && "code" in error && error.code === "DOCS_CONFIG_INVALID") {
+    // Handle invalid config
+  }
+  throw error;
 }
 ```
 
-### Error Formatting
-
-Human-readable error output:
-
-```ts
-import { formatError } from "@vetwo/docs";
-
-console.log(formatError(error));
-// ✖ ConfigError: Configuration validation failed
-//   - title: Required
-//   Suggestion: Run `docs init` to create a config file.
-//   Error Code: CONFIG_INVALID
-```
+A failed build propagates its error and exits nonzero — validation failures are never downgraded to warnings. See [SAFETY.md](./SAFETY.md) for the full guarantee list.
 
 ---
 
 ## Architecture
 
-`@vetwo/docs` is organised as a **layered architecture** with strict dependency
-direction. Every layer is a self-contained folder that can be reasoned about,
-tested, and replaced independently.
+`@vetwo/docs` is organised around one canonical content pipeline. Authored Markdown/MDX flows through discovery and normalization, the site model, the versioned Documentation IR, output planning, and target renderers into owned, reconciled output. The engine (`createDocsEngine()` → `initialize()` → `build()` → `dispose()`) orchestrates the lifecycle behind a service container; all CLI commands share one context helper for root/config/logger resolution.
 
 ```
-CLI ──────→ Engine ──────→ Pipeline ──────→ Domain Layers ──────→ Utilities
-(src/cli)   (src/engine)   (src/pipeline)   (config, scanner,      (filesystem,
-                                            features, generator,     cache, utils,
-                                            renderer, analyzer,      logger, ...)
-                                            plugins, themes)
+authored *.md/*.mdx + assets
+  → site discovery + normalization  (src/site/)
+  → site model → IR adapter         (src/site/model.ts, src/site/adapters.ts)
+  → output planning                 (src/renderers/output-plan.ts)
+  → Fumadocs / static / Markdown / Next.js renderers
+  → writers + manifest + reconcile + validate
 ```
 
-### Layer responsibilities
-
-| Layer | Folder | Responsibility |
-|---|---|---|
-| CLI | `src/cli/` | Command-line surface (`build`, `dev`, `generate`, `doctor`, …). Thin, delegates to the engine. |
-| Engine | `src/engine/` | `DocsEngine` lifecycle (`createDocsEngine()` → `initialize()` → `build()` → `dispose()`), service container, service wiring. |
-| Pipeline | `src/pipeline/` | Build context creation and the stage pipeline that runs plugins and feature generators. |
-| Domain | `src/config/`, `src/scanner/`, `src/features/`, `src/plugins/`, `src/themes/`, `src/generator/`, `src/renderer/`, `src/analyzer/`, `src/compiler/`, `src/graph/` | Feature logic: config loading/validation, file & project discovery, markdown processing, feature output, plugins, themes, page generation, analysis, and reserved compiler/graph surfaces. |
-| Utilities | `src/filesystem/`, `src/cache/`, `src/utils/`, `src/logger/`, `src/errors/`, `src/components/`, `src/hooks/`, `src/dev-server/`, `src/react/` | Shared infrastructure used by upper layers. |
-
-### Engine lifecycle
-
-```
-createDocsEngine(options)        # wire up the service container
-  └─ initialize()                # detect project + load config + enable cache
-       └─ build()                # discover files → create context → run pipeline
-            └─ dispose()         # release services (engine can be re-initialized)
-```
-
-The engine can also run subsystems independently:
-`runPipeline(ctx)`, `runGenerator(options)`, `runAnalyzer(rootDir)`.
-
-### Pipeline stages
-
-```
-init → discover → config → load → transform → generate → output → done
-```
-
-1. **init** — Set up build context, logger, temp directories
-2. **discover** — Scan source directory, detect project type
-3. **config** — Load and validate configuration
-4. **load** — Parse Markdown, extract frontmatter, headings
-5. **transform** — Apply remark/rehype plugins, custom transforms
-6. **generate** — Create search index, API docs, sitemap, RSS
-7. **output** — Write all files to disk
-8. **done** — Clean up, report stats
-
-### Key Modules
-
-| Module | Purpose |
-|---|---|
-| `src/engine/` | `DocsEngine` lifecycle, `ServiceContainer`, service wiring, `build()` entry |
-| `src/pipeline/` | Build context and pipeline orchestration |
-| `src/scanner/` | File discovery and project detection (moved from `src/discovery/`) |
-| `src/config/` | Configuration loading, validation (Zod), merging |
-| `src/features/` | Feature generators (search, SEO, RSS, navigation, API docs) |
-| `src/plugins/` | Plugin registry, built-in plugins (openApi, mermaid) |
-| `src/renderer/` | HTML output rendering (moved from `src/renderers/`) |
-| `src/generator/` | Auto source-code documentation generator (reorganised into `core/`, `pages/`, `metadata/`) |
-| `src/analyzer/` | Project analysis for API documentation (moved from `src/generator/analyzer.ts`) |
-| `src/compiler/`, `src/graph/` | Reserved layer surfaces (interfaces only, no behavior yet) |
-| `src/cache/` | Content-based build caching |
-| `src/logger/` | Logging (sync/async, chalk/ora) |
-| `src/errors/` | Error hierarchy, codes, formatting |
-| `src/components/` | Component registry (Callout, CodeBlock, Tabs) |
-| `src/themes/` | Theme registry (default, midnight, forest) |
-| `src/hooks/` | Hook system for plugins |
-| `src/utils/` | Utilities (async, hash, HTML) |
-| `src/dev-server/` | Development server |
-| `src/react/` | React component bindings |
-
-> **Backward-compatible facades.** Old module paths keep working via re-export
-> facades: `src/core/index.ts` re-exports the engine + `createBuildContext`,
-> `src/discovery/`, `src/renderers/`, `src/templates/`, and
-> `src/generator/{analyzer,config,types,generators}` re-export their new
-> locations. See `MIGRATION.md` for the full old → new path map.
-
-### Data Flow
-
-```
-Source Files → Scanner → [Markdown Pages] → Pipeline → [HTML Pages]
-                                                          ↓
-Config ─────→ Engine ─────→ Pipeline ─────→ Generate → [Search Index, Sitemap, RSS, ...]
-                                                          ↓
-Plugins ────→ Hook into lifecycle ────────→ Output → [docs-site/]
-```
+The full module map, layer responsibilities, engine lifecycle, state layout, and the legacy compatibility boundary are documented in [ARCHITECTURE.md](./ARCHITECTURE.md). Safety guarantees live in [SAFETY.md](./SAFETY.md).
 
 ---
 
 ## Project Structure
 
 ```
-packages/docs/
-├── src/                          # Source code
-│   ├── index.ts                  # Main barrel export
-│   ├── cli/                      # CLI entry point
-│   ├── engine/                   # DocsEngine lifecycle, service container
-│   │   ├── container.ts          # Lightweight typed ServiceContainer
-│   │   ├── contracts/            # Service contracts (interfaces)
-│   │   ├── services/             # Service wiring (logger, config, discovery, …)
-│   │   └── index.ts              # createDocsEngine(), build()
-│   ├── pipeline/                 # Build context + pipeline orchestration
-│   ├── scanner/                  # File & project discovery (was src/discovery/)
-│   ├── config/                   # Config loading, validation, types
-│   ├── features/                 # Search, SEO, RSS, navigation, API docs
-│   ├── plugins/                  # Plugin system, built-in plugins
-│   ├── generator/                # Auto source-code doc generation
-│   │   ├── core/                 # Generator types + config resolution
-│   │   ├── pages/                # Page generators (8 pages)
-│   │   ├── metadata/             # Metadata generators (sidebar, nav, search, API)
-│   │   ├── cache.ts, writers.ts  # Generator cache, file output
-│   │   └── index.ts              # Main orchestrator
-│   ├── analyzer/                 # Project analysis (was generator/analyzer.ts)
-│   ├── compiler/                 # Reserved compiler layer (interfaces only)
-│   ├── graph/                    # Reserved graph layer (interfaces only)
-│   ├── renderer/                 # HTML output rendering (was src/renderers/ + templates/)
-│   ├── cache/                    # Build caching
-│   ├── logger/                   # Logging
-│   ├── errors/                   # Error classes, codes, formatting
-│   ├── components/               # Component registry
-│   ├── themes/                   # Theme registry
-│   ├── hooks/                    # Hook system
-│   ├── utils/                    # Utilities
-│   ├── dev-server/               # Dev server
-│   ├── react/                    # React bindings
-│   └── (facades)                 # src/core/, src/discovery/, src/renderers/,
-│                                 #   src/templates/, src/generator/analyzer.ts, …
-├── test/                         # Isolated test processes (cwd-sensitive cases)
-├── docs/                         # Documentation pages (60 files)
-├── examples/                     # Example projects (41 projects)
-├── generated-docs/               # Auto-generated documentation
-├── docs-site/                    # Built documentation site
-├── dist/                         # Compiled output (ESM + CJS + DTS)
-├── docs.config.ts                # Documentation config (dogfooding)
-├── package.json
-├── tsconfig.json
+packages/docs/ (“@vetwo/docs”, repo root for this package)
+├── src/
+│   ├── index.ts, react.ts           # published entry points (plus config/api/… subpaths)
+│   ├── cli/                         # CLI entry point and command registration
+│   ├── engine/                      # DocsEngine lifecycle, service container, materialization
+│   ├── site/                        # canonical content pipeline (discovery → model → IR)
+│   ├── renderers/                   # output planning + Fumadocs/static/Markdown/Next.js targets
+│   ├── documentation/compiler/      # legacy inference pipeline + shared IR/manifest types
+│   ├── config/                      # loading (loader), validation (Zod), defineDocs defaults
+│   ├── scanner/                     # file & project discovery
+│   ├── content/                     # authored-content inspection, MDX parsing, regeneration
+│   ├── state/                       # namespaced engine state under .vetwo/docs/
+│   ├── init/                        # plan/apply workspace bootstrap
+│   ├── dev-server/                  # development server with live reload
+│   ├── api/, intelligence/, ai/, incremental/, integrations/  # retained legacy tooling
+│   ├── plugins/, themes/, hooks/    # plugin system, theme registry, lifecycle hooks
+│   ├── renderer/, react.ts          # React bindings (DocsLayout, TOC, SearchBox, …)
+│   ├── analyzer/, symbols/, references/, graph/, languages/, compiler/
+│   │                                # language/symbol infrastructure (legacy path + contracts)
+│   └── filesystem/, errors/, logger/, cache/, utils/, types/  # shared infrastructure
+├── test/cwd-fallback.test.ts        # isolated cwd-sensitive engine test (own vitest config)
+├── docs/                            # generated self-documentation (git-ignored output)
+├── docs.config.ts                   # self-documentation config (explicit legacy pipeline)
+├── skills/docs-bootstrap/          # agent skill: bootstrap docs in a new project
+├── dist/                            # compiled output (ESM + CJS + DTS, via tsup)
+├── package.json, tsconfig.json
+└── *.md                             # hand-maintained docs (README, HOW_WORKS, CLI, SAFETY, …)
+```
 ├── tsup.config.ts
 ├── vitest.config.ts
 └── eslint.config.js
@@ -967,22 +795,21 @@ pnpm coverage          # With coverage report
 
 ### Test Structure
 
-- 36 test files, 600 tests
-- Vitest as test runner
-- Coverage thresholds: 90 statements / 75 branches / 90 functions / 90 lines
-- Tests co-located with source (`*.test.ts`)
+- Vitest as test runner; tests co-located with source (`*.test.ts`, plus `__tests__/` in places)
+- `test/cwd-fallback.test.ts` runs in an isolated process via its own `vitest.cwd.config.ts`
+- Behavior-level CLI tests mock the filesystem, HTTP layer, engine, and config loading
+- End-to-end materialization tests build real fixtures in temp directories
 
 ### Key Test Files
 
 | File | Tests |
 |---|---|
-| `generator/index.test.ts` | 51 tests — full generation pipeline |
-| `cli/index.test.ts` | 46 tests — all CLI commands |
-| `features/api-docs.test.ts` | 9 tests — TypeDoc integration |
-| `features/markdown.test.ts` | 33 tests — Markdown processing |
-| `errors/format.test.ts` | 33 tests — Error formatting |
-| `discovery/project.test.ts` | 32 tests — Project detection |
-| `features/output.test.ts` | 31 tests — File output |
+| `src/site/materialize.test.ts` | canonical materialization, ownership, determinism, failure modes |
+| `src/site/content-first.test.ts` | default-pipeline proofs, link matrix, retired-module regression |
+| `src/renderers/experience.test.ts` | cross-target Home/Blog/Search/identity parity |
+| `src/cli/index.test.ts` | CLI commands, flags, validation, exit behavior |
+| `src/engine/docs-materialize.test.ts` | legacy-pipeline end-to-end (explicit opt-in) |
+| `src/public-api.test.ts` + `src/packaging.test.ts` | public contract and export↔artifact alignment |
 
 ### Lint & Type Check
 
@@ -999,14 +826,14 @@ pnpm typecheck         # TypeScript compiler check
 
 ### Prerequisites
 
-- Node.js 18+
-- pnpm
+- Node.js 20+ (see `engines` in `package.json`)
+- pnpm (the repo uses `pnpm-workspace.yaml`)
 
 ### Setup
 
 ```bash
 git clone https://github.com/vetwo/docs.git
-cd docs/packages/docs
+cd packages/docs
 pnpm install
 ```
 
@@ -1038,19 +865,13 @@ Uses [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### CI/CD
 
-GitHub Actions workflows:
-
-| Workflow | Trigger | Jobs |
-|---|---|---|
-| `ci.yml` | Push/PR to main | lint, typecheck, test, build |
-| `test.yml` | Push/PR to main | Matrix tests (Node 18/20/22 × Linux/macOS/Windows) |
-| `docs.yml` | Push/PR to main | Generate + build documentation |
-| `release.yml` | Push to main | Changesets release |
-| `codeql.yml` | Push/PR + weekly | Security analysis |
-
-All workflows use pnpm for dependency management.
+No CI workflow files are checked into this package (`ci.yml`, `test.yml`, and similar are not present). The documented pre-merge bar is the manual checklist below, enforced locally by the pre-commit hook (`lint-staged`: `eslint --fix` and `prettier --write` on `.ts` files).
 
 ### Git Hooks
+
+Pre-commit hook runs `lint-staged` which executes:
+- `eslint --fix` on `.ts` files
+- `prettier --write` on `.ts` files
 
 Pre-commit hook runs `lint-staged` which executes:
 - `eslint --fix` on `.ts` files

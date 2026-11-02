@@ -1,7 +1,6 @@
-export { createCompilationContext } from "./context.js";
-export { freezeRecord } from "./freeze.js";
-export { createCompilationResult } from "./result.js";
-export { createSourceMap } from "./sourcemap.js";
-export { createCompilationStatistics } from "./statistics.js";
-export { createSyntaxTree } from "./syntax.js";
-export { createCompilationUnit } from "./unit.js";
+export * from "./context.js";
+export * from "./result.js";
+export * from "./sourcemap.js";
+export * from "./statistics.js";
+export * from "./syntax.js";
+export * from "./unit.js";

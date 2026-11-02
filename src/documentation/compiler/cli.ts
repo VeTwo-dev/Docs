@@ -242,7 +242,9 @@ export function registerCompilerCommands(
 
   program
     .command("validate-output")
-    .description("Validate the generated documentation workspace (boundaries, routes, links, assets, CSS, search)")
+    .description(
+      "Validate the generated documentation workspace (boundaries, routes, links, assets, CSS, search)",
+    )
     .option("-o, --out <directory>", "Workspace directory (resolved from config when omitted)")
     .option("--json", "Output as JSON")
     .action(async (options: { out?: string; json?: boolean }) => {
@@ -263,7 +265,9 @@ export function registerCompilerCommands(
       if (options.json === true) {
         logger.info(JSON.stringify(result, null, 2));
       } else if (result.errors.length === 0 && result.warnings.length === 0) {
-        logger.success(`Output valid: ${result.pages} pages, ${result.routes} routes, ${result.assets} assets`);
+        logger.success(
+          `Output valid: ${result.pages} pages, ${result.routes} routes, ${result.assets} assets`,
+        );
       } else {
         for (const e of result.errors) logger.error(`✗ ${e}`);
         for (const w of result.warnings) logger.warn(`⚠ ${w}`);

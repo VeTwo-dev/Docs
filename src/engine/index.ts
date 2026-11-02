@@ -1,7 +1,6 @@
 import type { Logger } from "../types/internal.js";
 import type { BuildContextMutable } from "../types/internal.js";
 import type { DocsConfig } from "../config/types.js";
-import { resolveOutputDirectory } from "../config/resolve.js";
 import type { ProjectDetection } from "../scanner/project.js";
 import type { ProjectModel } from "../scanner/models/project.js";
 import type { ScannerScanOptions } from "../scanner/engine/engine.js";
@@ -16,7 +15,8 @@ import { createCompilerManager, type CompilerManager } from "../compiler/index.j
 import { createSymbolEngine, type SymbolEngine } from "../symbols/index.js";
 import { createReferenceEngine, type ReferenceEngine } from "../references/index.js";
 import { createGraphEngine, type GraphEngine } from "../graph/index.js";
-import { ensureDir } from "../filesystem/index.js";
+import { DocsError } from "../errors/classes.js";
+import { ErrorCode } from "../errors/codes.js";
 import { ServiceContainer } from "./container.js";
 import {
   LOGGER_SERVICE,
@@ -266,26 +266,40 @@ class DocsEngineImpl implements DocsEngine {
     const ctx = createBuildContext(config, rootDir, this.detection!, cache);
     (ctx as { sourceFiles: typeof ctx.sourceFiles }).sourceFiles = docFiles as never;
 
-    if (config.clean) {
-      ensureDir(resolveOutputDirectory(config));
-    }
-
+    // Output directories are created by the generator/materializer anchored
+    // at rootDir. (A previous revision ensured a cwd-relative directory here,
+    // which created stray folders whenever cwd differed from rootDir.)
     const pluginService = this.services.resolve<PluginService>(PLUGIN_SERVICE);
     pluginService.setup(config);
 
-    const pipeline = createPipeline({
-      logger,
-      plugins: pluginService.registry.getPlugins(),
-    });
+    // Strangler: in canonical mode `materializeDocumentation` owns all output.
+    // Running the legacy feature pipeline too would write a redundant,
+    // source-code-derived site (flat root HTML, baseUrl-style links) that the
+    // canonical layout does not reference.
+    if (config.content?.pipeline === "canonical") {
+      logger.debug("Canonical content pipeline selected; skipping legacy feature pipeline");
+    } else {
+      const pipeline = createPipeline({
+        logger,
+        plugins: pluginService.registry.getPlugins(),
+      });
 
-    await pipeline.run(ctx);
+      await pipeline.run(ctx);
+    }
 
     // Phase 22.1: Materialize Documentation IR → md/next/static (non-destructive, manifest, ownership)
+    // Materialization is the supported output: its failure fails the build.
+    // Downgrading it to a warning would report success for empty or invalid
+    // output (a prior revision did exactly that via logger.warn here).
     try {
       const { materializeDocumentation } = await import("./docs-materialize.js");
       await materializeDocumentation(rootDir, config, logger);
     } catch (e) {
-      logger.warn(`Materialization warning: ${e instanceof Error ? e.message : String(e)}`);
+      if (e instanceof DocsError) throw e;
+      throw new DocsError({
+        code: ErrorCode.BUILD_FAILED,
+        message: `Materialization failed: ${e instanceof Error ? e.message : String(e)}`,
+      });
     }
 
     if (this.cacheService.isEnabled) {
@@ -383,7 +397,7 @@ export function createDocsEngine(options: EngineOptions = {}): DocsEngine {
 export async function build(options: BuildOptions): Promise<void> {
   const engine = createDocsEngine({ rootDir: options.rootDir, logger: options.logger });
   try {
-    await engine.initialize();
+    await engine.initialize({ rootDir: options.rootDir, configPath: options.configPath });
     await engine.build(options);
   } finally {
     await engine.dispose();

@@ -38,7 +38,11 @@ export function readBaseline(rootDir: string): ApiBaselineFile | undefined {
 export function writeBaseline(rootDir: string, symbols: readonly ApiSymbol[]): string {
   const p = baselinePath(rootDir);
   mkdirSync(dirname(p), { recursive: true });
-  const file: ApiBaselineFile = { version: 1, generatedAt: new Date().toISOString(), symbols: [...symbols] };
+  const file: ApiBaselineFile = {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    symbols: [...symbols],
+  };
   writeFileSync(p, `${JSON.stringify(file, null, 2)}\n`, "utf8");
   return p;
 }

@@ -1,182 +1,120 @@
-/**
- * @module AI
- *
- * Pluggable AI Documentation Provider System and AI Documentation Intelligence Engine.
- *
- * This module provides:
- * - Provider interface and registry for pluggable AI backends
- * - Capability negotiation and health checks
- * - Context assembly from project intelligence
- * - Documentation planning with project-type awareness
- * - Terminology detection and validation
- * - Anti-hallucination claim validation
- * - Quality evaluation and review loops
- * - Incremental regeneration
- * - Run tracking and caching
- * - Skill file generation
- */
-
-// ─── Core Types ──────────────────────────────────────────────────────────
-export type { AIProviderCapabilities, AICapability } from "./capabilities.js";
-export { hasCapability, supportedCapabilities, intersectCapabilities } from "./capabilities.js";
-
-export type {
-  AIProviderMetadata,
-  AIProviderModel,
-  AIAuthKind,
-  AIProviderAuthRequirement,
-} from "./metadata.js";
-
-export type {
-  AIDocumentationIntent,
-  AIAudience,
-  AIDocumentationVoice,
-  AITerminologyEntry,
-  AIAnalysisRequest,
-  AIAnalysisResult,
-  AIDocumentationRequest,
-  AIDocumentationResult,
-  AIUpdateRequest,
-  AIUpdateResult,
-  AIContextBundle,
-  AIProjectContext,
-  AIArchitectureContext,
-  AIAPIContext,
-  AIConceptContext,
-  AIExampleContext,
-  AIWorkflowContext,
-  AIConfigurationContext,
-  AITroubleshootingContext,
-  AIExistingDoc,
-  AIEvidenceReference,
-  AIDocumentationClaim,
-  AIDiagramDefinition,
-  AIExampleProposal,
-  AIRecommendation,
-  AIProviderContext,
-  AIRunMetadata,
-  AIGeneratedPage,
-} from "./types.js";
-
-// ─── Provider Interface ──────────────────────────────────────────────────
-export type { AIProvider, AIProviderFactory } from "./provider.js";
-
-// ─── Health ──────────────────────────────────────────────────────────────
-export type { AIProviderHealthStatus, AIProviderHealth } from "./health.js";
-
-// ─── Registry ────────────────────────────────────────────────────────────
-export type { AIProviderRegistry, AIProviderEntry, AIFallbackChain } from "./registry.js";
-export { createAIProviderRegistry, createAIProviderRegistryWith } from "./registry.js";
-
-// ─── Discovery ───────────────────────────────────────────────────────────
-export type { DiscoveredProvider } from "./discovery.js";
+export { buildCacheKey, createAICache } from "./cache/cache.js";
+export type { AICache, AICacheEntry } from "./cache/cache.js";
+export { hasCapability, intersectCapabilities, supportedCapabilities } from "./capabilities.js";
+export type { AICapability, AIProviderCapabilities } from "./capabilities.js";
+export { registerAICommands } from "./cli/commands.js";
+export { DEFAULT_AI_CONFIG, resolveAIConfig } from "./config.js";
+export type { AIConfig, AIProviderConfig, AIProviderProfile } from "./config.js";
+export { buildAIContext, selectContextPacksForIntent } from "./context/context-builder.js";
+export type { AIContextBuilderConfig, AIContextBuilderInput } from "./context/context-builder.js";
 export {
+  prioritizeAPIs,
+  prioritizeConcepts,
+  prioritizeExamples,
+  trimToBudget,
+} from "./context/prioritizer.js";
+export {
+  discoverAndRegisterProviders,
   discoverBuiltinProviders,
   discoverNpmProviders,
   registerDiscoveredProviders,
-  discoverAndRegisterProviders,
 } from "./discovery.js";
-
-// ─── Config ──────────────────────────────────────────────────────────────
-export type { AIProviderConfig, AIConfig, AIProviderProfile } from "./config.js";
-export { DEFAULT_AI_CONFIG, resolveAIConfig } from "./config.js";
-
-// ─── Lifecycle ───────────────────────────────────────────────────────────
-export type {
-  AIProviderLifecycleManager,
-  ManagedProvider,
-  AIProviderLifecycleState,
-} from "./lifecycle.js";
-export { AIProviderExhaustedError, createAIProviderLifecycleManager } from "./lifecycle.js";
-
-// ─── Context Builder ─────────────────────────────────────────────────────
-export type { AIContextBuilderInput, AIContextBuilderConfig } from "./context/context-builder.js";
-export { buildAIContext, selectContextPacksForIntent } from "./context/context-builder.js";
-
-// ─── Context Prioritizer ─────────────────────────────────────────────────
-export {
-  prioritizeAPIs,
-  prioritizeExamples,
-  prioritizeConcepts,
-  trimToBudget,
-} from "./context/prioritizer.js";
-
-// ─── Planning ────────────────────────────────────────────────────────────
-export type { DocPlanPage, DocumentationPlan } from "./planning/plan.js";
-export { generateDocumentationPlan, inferProjectType } from "./planning/plan.js";
-
-// ─── Terminology ─────────────────────────────────────────────────────────
-export {
-  detectTerminology,
-  buildTerminologyDictionary,
-  validateTerminology,
-} from "./terminology/dictionary.js";
-
-// ─── Validation ──────────────────────────────────────────────────────────
-export type { ClaimValidationResult, ValidationEvidence } from "./validation/claims.js";
-export { validateClaim, validateClaims, summarizeClaimValidation } from "./validation/claims.js";
-
-export type {
-  GeneratedLink,
-  LinkValidationResult,
-  DocumentationModel,
-} from "./validation/links.js";
-export {
-  validateLink,
-  validateLinks,
-  extractLinksFromContent,
-  summarizeLinkValidation,
-} from "./validation/links.js";
-
-// ─── Generation ──────────────────────────────────────────────────────────
-export type { AIGenerationConfig } from "./generation/engine.js";
-export {
-  generatePage,
-  generateBatch,
-  generateDirect,
-  updateDocumentation,
-  buildPageContext,
-} from "./generation/engine.js";
-
-// ─── Evaluation ──────────────────────────────────────────────────────────
+export type { DiscoveredProvider } from "./discovery.js";
+export { evaluatePage, evaluatePages, summarizeEvaluation } from "./evaluation/evaluator.js";
 export type {
   QualityDimension,
   QualityEvaluation,
-  QualityIssue,
   QualityEvaluationConfig,
+  QualityIssue,
 } from "./evaluation/evaluator.js";
-export { evaluatePage, evaluatePages, summarizeEvaluation } from "./evaluation/evaluator.js";
-
-// ─── Review Loop ─────────────────────────────────────────────────────────
-export type { AIReviewLoopConfig, AIReviewResult } from "./review/loop.js";
-export { reviewPage, reviewBatch, summarizeReview } from "./review/loop.js";
-
-// ─── Run Tracking ────────────────────────────────────────────────────────
-export type { AIRunTracker } from "./runs/tracker.js";
-export { createAIRunTracker } from "./runs/tracker.js";
-
-// ─── Cache ───────────────────────────────────────────────────────────────
-export type { AICache, AICacheEntry } from "./cache/cache.js";
-export { createAICache, buildCacheKey } from "./cache/cache.js";
-
-// ─── Incremental ─────────────────────────────────────────────────────────
-export type { CodeChange, ImpactAnalysis } from "./incremental/impact.js";
-export { analyzeImpact } from "./incremental/impact.js";
-
-// ─── Skill ───────────────────────────────────────────────────────────────
 export {
+  buildPageContext,
+  generateBatch,
+  generateDirect,
+  generatePage,
+  updateDocumentation,
+} from "./generation/engine.js";
+export type { AIGenerationConfig } from "./generation/engine.js";
+export { analyzeImpact } from "./incremental/impact.js";
+export type { CodeChange, ImpactAnalysis } from "./incremental/impact.js";
+export { AIProviderExhaustedError, createAIProviderLifecycleManager } from "./lifecycle.js";
+export type {
+  AIProviderLifecycleManager,
+  AIProviderLifecycleState,
+  ManagedProvider,
+} from "./lifecycle.js";
+export { generateDocumentationPlan, inferProjectType } from "./planning/plan.js";
+export type { DocPlanPage, DocumentationPlan } from "./planning/plan.js";
+export { createOpenWikiProviderFactory } from "./providers/openwiki.js";
+export { createAIProviderRegistry, createAIProviderRegistryWith } from "./registry.js";
+export type { AIFallbackChain, AIProviderEntry, AIProviderRegistry } from "./registry.js";
+export { reviewBatch, reviewPage, summarizeReview } from "./review/loop.js";
+export type { AIReviewLoopConfig, AIReviewResult } from "./review/loop.js";
+export { createAIRunTracker } from "./runs/tracker.js";
+export type { AIRunTracker } from "./runs/tracker.js";
+export {
+  AI_MANAGED_SECTIONS,
   buildAIIntelligenceSection,
-  buildAIWorkflowSection,
-  buildAIValidationSection,
-  buildAITerminologySection,
   buildAISkillContent,
+  buildAITerminologySection,
+  buildAIValidationSection,
+  buildAIWorkflowSection,
   extractAIManagedSections,
   mergeAISkillContent,
-  AI_MANAGED_SECTIONS,
 } from "./skill/ai-skill.js";
-
-// ─── Provider Adapters ───────────────────────────────────────────────────
-export { createOpenWikiProviderFactory } from "./providers/openwiki.js";
-
-// ─── CLI ─────────────────────────────────────────────────────────────────
-export { registerAICommands } from "./cli/commands.js";
+export {
+  buildTerminologyDictionary,
+  detectTerminology,
+  validateTerminology,
+} from "./terminology/dictionary.js";
+export { summarizeClaimValidation, validateClaim, validateClaims } from "./validation/claims.js";
+export type { ClaimValidationResult, ValidationEvidence } from "./validation/claims.js";
+export {
+  extractLinksFromContent,
+  summarizeLinkValidation,
+  validateLink,
+  validateLinks,
+} from "./validation/links.js";
+export type {
+  DocumentationModel,
+  GeneratedLink,
+  LinkValidationResult,
+} from "./validation/links.js";
+export type {
+  AIAPIContext,
+  AIAnalysisRequest,
+  AIAnalysisResult,
+  AIArchitectureContext,
+  AIAudience,
+  AIConceptContext,
+  AIConfigurationContext,
+  AIContextBundle,
+  AIDiagramDefinition,
+  AIDocumentationClaim,
+  AIDocumentationIntent,
+  AIDocumentationRequest,
+  AIDocumentationResult,
+  AIDocumentationVoice,
+  AIEvidenceReference,
+  AIExampleContext,
+  AIExampleProposal,
+  AIExistingDoc,
+  AIGeneratedPage,
+  AIProjectContext,
+  AIProviderContext,
+  AIRecommendation,
+  AIRunMetadata,
+  AITerminologyEntry,
+  AITroubleshootingContext,
+  AIUpdateRequest,
+  AIUpdateResult,
+  AIWorkflowContext,
+} from "./types.js";
+export type { AIProvider, AIProviderFactory } from "./provider.js";
+export type { AIProviderHealth, AIProviderHealthStatus } from "./health.js";
+export type {
+  AIAuthKind,
+  AIProviderAuthRequirement,
+  AIProviderMetadata,
+  AIProviderModel,
+} from "./metadata.js";

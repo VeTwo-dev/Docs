@@ -88,9 +88,7 @@ export function computeDocumentationImpact(
 
     // Find the most explanatory seed for this artifact.
     const deps = graph.dependencies[node] ?? [];
-    const seedFiles = deps
-      .filter((d) => seeds.includes(d))
-      .map((d) => d.slice("file:".length));
+    const seedFiles = deps.filter((d) => seeds.includes(d)).map((d) => d.slice("file:".length));
     const seedSymbols = deps
       .filter((d) => d.startsWith("symbol:") && seeds.includes(d))
       .map((d) => d.slice("symbol:".length));
@@ -109,9 +107,7 @@ export function computeDocumentationImpact(
   // ── Drift & staleness ────────────────────────────────────────────────
   const stalePages: { slug: string; reason: string }[] = [];
   if (snapshot !== undefined) {
-    const allRemovedSymbols = new Set(
-      changes.flatMap((c) => c.affectedSymbols.removed),
-    );
+    const allRemovedSymbols = new Set(changes.flatMap((c) => c.affectedSymbols.removed));
     for (const [id, entry] of Object.entries(snapshot.artifacts)) {
       if (entry.kind !== "page") continue;
       const missing = entry.dependsOnSymbols.filter((s) => allRemovedSymbols.has(s));
@@ -137,9 +133,7 @@ export function computeDocumentationImpact(
   if (maxChangeWeight >= 3) level = "high";
   if (
     changes.some(
-      (c) =>
-        c.categories.includes("public-api") &&
-        c.affectedSymbols.removed.length > 0,
+      (c) => c.categories.includes("public-api") && c.affectedSymbols.removed.length > 0,
     ) ||
     stalePages.length > 0
   ) {

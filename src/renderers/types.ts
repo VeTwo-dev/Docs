@@ -32,7 +32,7 @@ export interface SiteRoute {
 /** The complete output of rendering an IR document. */
 export interface RenderedSite {
   /** Renderer target id. */
-  readonly target: "nextjs" | "static-html" | "markdown";
+  readonly target: "nextjs" | "static-html" | "markdown" | "fumadocs";
   /** All files of the site, ready to be written to disk. */
   readonly files: readonly RenderedFile[];
   /** Routable pages with their URL mapping. */
@@ -81,6 +81,12 @@ export interface SiteRendererOptions {
   readonly navLinks?: readonly RendererNavLink[];
   /** Inline SVG markup for the site logo; a monogram is derived when absent. */
   readonly logoSvg?: string;
+  /**
+   * Composed design CSS generated from the persistent `design/` sources
+   * (tokens → base → components, with a generated-file banner). When
+   * absent, renderers fall back to the embedded default design kit.
+   */
+  readonly designCss?: string;
 }
 
 /**

@@ -10,7 +10,14 @@
  * discarded safely (never treated as authoritative).
  */
 
-import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync, existsSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+  existsSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { hashContent } from "./fingerprints.js";
 
@@ -36,7 +43,8 @@ export interface SnapshotFileEntry {
 export interface ArtifactEntry {
   /** Artifact id (page slug or output id like `search-index`). */
   readonly id: string;
-  readonly kind: "page" | "navigation" | "search-index" | "sitemap" | "rss" | "og" | "asset" | "static-output";
+  readonly kind:
+    "page" | "navigation" | "search-index" | "sitemap" | "rss" | "og" | "asset" | "static-output";
   /** Files this artifact depends on (relative paths). */
   readonly dependsOnFiles: readonly string[];
   /** Symbols this artifact documents/references. */
@@ -57,7 +65,9 @@ export interface ProjectSnapshot {
 }
 
 /** Create an empty snapshot. */
-export function createSnapshot(init: Partial<Omit<ProjectSnapshot, "schemaVersion">> = {}): ProjectSnapshot {
+export function createSnapshot(
+  init: Partial<Omit<ProjectSnapshot, "schemaVersion">> = {},
+): ProjectSnapshot {
   return {
     schemaVersion: SNAPSHOT_SCHEMA_VERSION,
     createdAt: new Date().toISOString(),

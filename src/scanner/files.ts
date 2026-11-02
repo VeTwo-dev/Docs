@@ -30,10 +30,13 @@ export async function discoverDocFiles(
 ): Promise<readonly SourceFile[]> {
   const patterns = ALL_DOC_EXTENSIONS.map((ext) => `**/*${ext}`);
   const combinedIgnore = [...DEFAULT_IGNORE_PATTERNS, ...ignore];
-  const files = await findFiles(patterns, sourceDir, combinedIgnore);
+  // sourceDir is project-relative by contract (see docstring): anchor it so
+  // discovery never depends on process.cwd().
+  const anchored = resolve(rootDir, sourceDir);
+  const files = await findFiles(patterns, anchored, combinedIgnore);
 
   return files.map((file) => {
-    const absolutePath = resolve(sourceDir, file);
+    const absolutePath = resolve(anchored, file);
     return {
       path: absolutePath,
       relativePath: relative(rootDir, absolutePath),
@@ -70,10 +73,11 @@ export async function discoverSourceFiles(
     "**/*.d.ts",
     ...ignore,
   ];
-  const files = await findFiles(patterns, sourceDir, combinedIgnore);
+  const anchored = resolve(rootDir, sourceDir);
+  const files = await findFiles(patterns, anchored, combinedIgnore);
 
   return files.map((file) => {
-    const absolutePath = resolve(sourceDir, file);
+    const absolutePath = resolve(anchored, file);
     return {
       path: absolutePath,
       relativePath: relative(rootDir, absolutePath),

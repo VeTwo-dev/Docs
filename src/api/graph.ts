@@ -28,13 +28,6 @@ export interface ApiEdge {
   readonly label?: string;
 }
 
-/** Query result for graph traversal. */
-export interface ApiGraphQuery {
-  readonly symbol: ApiSymbol;
-  readonly edges: readonly ApiEdge[];
-  readonly related: readonly ApiSymbol[];
-}
-
 /** The API relationship graph. */
 export interface ApiGraph {
   /** All edges. */

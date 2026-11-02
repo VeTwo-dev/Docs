@@ -21,7 +21,9 @@ export function createIncrementalCache(): {
   const store = new Map<string, IncrementalApiCache>();
   return {
     get: (k) => store.get(k),
-    set: (k, v) => { store.set(k, v); },
+    set: (k, v) => {
+      store.set(k, v);
+    },
     clear: () => store.clear(),
   };
 }
@@ -61,7 +63,10 @@ export function mergeIncremental(
 ): { symbols: ApiSymbol[]; cache: IncrementalApiCache } {
   if (!plan.canReuse || cached === undefined) {
     const byFile = groupByFile(freshSymbols);
-    return { symbols: [...freshSymbols], cache: { fileHashes: new Map(currentHashes), symbolsByFile: byFile } };
+    return {
+      symbols: [...freshSymbols],
+      cache: { fileHashes: new Map(currentHashes), symbolsByFile: byFile },
+    };
   }
   const reused = plan.reusableFiles.flatMap((f) => [...(cached.symbolsByFile.get(f) ?? [])]);
   const all = [...reused, ...freshSymbols];

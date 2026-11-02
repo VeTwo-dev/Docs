@@ -224,7 +224,11 @@ export function extractAttributes(
   return attrs;
 }
 
-function jsxToCustomBlock(name: string, element: MdxJsxFlowElement | MdxJsxTextElement): IRBlock {
+/** Extract data-only props from a JSX element as a custom IR block. Exported for reuse by the canonical content pipeline (no evaluation). */
+export function jsxToCustomBlock(
+  name: string,
+  element: MdxJsxFlowElement | MdxJsxTextElement,
+): IRBlock {
   const props = extractAttributes(element) as Record<string, unknown>;
   const children = element.children ?? [];
   const text = mdastToString({ type: "root", children } as never).trim();

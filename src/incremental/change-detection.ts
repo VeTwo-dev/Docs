@@ -60,8 +60,16 @@ const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 const DOC_EXTENSIONS = [".md", ".mdx"];
 const CONFIG_FILES = ["docs.config.ts", "docs.config.js", "docs.config.mjs", "tsconfig.json"];
 const ASSET_EXTENSIONS = [
-  ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico",
-  ".woff", ".woff2", ".ttf",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".svg",
+  ".webp",
+  ".ico",
+  ".woff",
+  ".woff2",
+  ".ttf",
 ];
 
 export function classifyFileKind(relPath: string): TrackedFileKind {
@@ -89,7 +97,13 @@ export function scanProjectFiles(
 ): ScanEntry[] {
   const entries: ScanEntry[] = [];
   const ignoreDirs = new Set([
-    "node_modules", ".git", ".vetwo", ".next", "dist", "out", "coverage",
+    "node_modules",
+    ".git",
+    ".vetwo",
+    ".next",
+    "dist",
+    "out",
+    "coverage",
   ]);
   if (options.includeGenerated !== true) ignoreDirs.add("generated");
 
@@ -176,7 +190,11 @@ export function extractExportNames(source: string): string[] {
   }
   for (const match of source.matchAll(/export\s*\{([^}]+)\}/g)) {
     for (const part of match[1]?.split(",") ?? []) {
-      const name = part.trim().split(/\s+as\s+/).pop()?.trim();
+      const name = part
+        .trim()
+        .split(/\s+as\s+/)
+        .pop()
+        ?.trim();
       if (name !== undefined && /^[\w$]+$/.test(name)) names.add(name);
     }
   }
@@ -282,7 +300,10 @@ export function detectChanges(
     removeFirst(changes, (c) => c.kind === "added" && c.path === rename.to);
     const prevEntry = previousFiles[rename.from];
     const nextEntry = current.get(rename.to);
-    const symbolDelta = diffStrings(prevEntry?.exports ?? [], nextEntry ? snapshotFileEntry(nextEntry).exports ?? [] : []);
+    const symbolDelta = diffStrings(
+      prevEntry?.exports ?? [],
+      nextEntry ? (snapshotFileEntry(nextEntry).exports ?? []) : [],
+    );
     changes.push({
       kind: isSameDirectory(rename.from, rename.to) ? "renamed" : "moved",
       path: rename.to,
@@ -354,8 +375,7 @@ function pairRenames(
 /** Same content + similar filename ⇒ rename; same dir ⇒ moved. */
 function renameScore(from: string, _fromHash: string, to: string, toContents: string): number {
   const sameBasename = baseName(from) === baseName(to);
-  const semanticEqual =
-    hashContent(stripForCompare(toContents)) !== "" ; // presence check only
+  const semanticEqual = hashContent(stripForCompare(toContents)) !== ""; // presence check only
   void semanticEqual;
   let score = 0;
   if (sameBasename) score += 0.5;
@@ -414,14 +434,20 @@ export function gitBranch(rootDir: string): string | undefined {
 }
 
 /** Restrict a change set to Git-reported paths (CI/PR mode). */
-export function filterByGitPaths(changes: readonly ProjectChange[], paths: readonly string[]): readonly ProjectChange[] {
+export function filterByGitPaths(
+  changes: readonly ProjectChange[],
+  paths: readonly string[],
+): readonly ProjectChange[] {
   const set = new Set(paths);
   return changes.filter((c) => set.has(c.path) || (c.oldPath !== undefined && set.has(c.oldPath)));
 }
 
 // ─── Small helpers ───────────────────────────────────────────────────────
 
-function diffStrings(before: readonly string[], after: readonly string[]): {
+function diffStrings(
+  before: readonly string[],
+  after: readonly string[],
+): {
   added: string[];
   removed: string[];
 } {

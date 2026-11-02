@@ -1,5 +1,6 @@
 import type { DocsConfig } from "../config/types.js";
 import { resolveOutputDirectory } from "../config/resolve.js";
+import { resolve } from "node:path";
 import type { BuildContextMutable, BuildContext } from "../types/internal.js";
 import type { CacheStore } from "../cache/index.js";
 import type {
@@ -46,7 +47,10 @@ export function createBuildContext(
     config,
     rootDir,
     sourceDir: config.source,
-    outputDir: resolveOutputDirectory(config),
+    // Anchored at rootDir: stage writers join filenames onto outputDir, so a
+    // relative value would resolve against process.cwd() and scatter
+    // generated files whenever cwd differs from the project root.
+    outputDir: resolve(rootDir, resolveOutputDirectory(config)),
     projectType: detection.projectType,
     packageManager: detection.packageManager,
     workspaceInfo: detection.workspaceInfo,
